@@ -1104,6 +1104,10 @@ const AP_Param::Info var_info[] PROGMEM = {
     // @Path: ../libraries/AP_BoardConfig/AP_BoardConfig.cpp
     GOBJECT(BoardConfig,            "BRD_",       AP_BoardConfig),
 
+    // @Group: PARA_
+    // @Patk: ../libraries/AP_OT_Parachute/AP_OT_Parachute.cpp
+    GOBJECT(parachute,              "PARA_",      AP_OT_Parachute),
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_AVR_SITL
     // @Group: SIM_
     // @Path: ../libraries/SITL/SITL.cpp

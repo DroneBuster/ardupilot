@@ -303,6 +303,7 @@ public:
         k_param_pidTeThrottle, // unused
         k_param_pidNavPitchAltitude, // unused
         k_param_pidWheelSteer, // unused
+        k_param_parachute,
 
         // 254,255: reserved
     };
