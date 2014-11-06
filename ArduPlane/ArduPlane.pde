@@ -85,6 +85,8 @@
 
 #include <AP_Rally.h>
 
+#include <AP_OT_Parachute.h>
+
 // Pre-AP_HAL compatibility
 #include "compat.h"
 
@@ -373,7 +375,7 @@ static struct {
     uint16_t ch1_temp;
     uint16_t ch2_temp;
 } elevon = {
-	trim1 : 1500,
+    trim1 : 1500,
     trim2 : 1500,
     ch1_temp : 1500,
     ch2_temp : 1500
@@ -503,9 +505,9 @@ static struct {
 // ground steering controller state
 ////////////////////////////////////////////////////////////////////////////////
 static struct {
-	// Direction held during phases of takeoff and landing centidegrees
-	// A value of -1 indicates the course has not been set/is not in use
-	// this is a 0..36000 value, or -1 for disabled
+    // Direction held during phases of takeoff and landing centidegrees
+    // A value of -1 indicates the course has not been set/is not in use
+    // this is a 0..36000 value, or -1 for disabled
     int32_t hold_course_cd;
 
     // locked_course and locked_course_cd are used in stabilize mode 
@@ -513,7 +515,7 @@ static struct {
     bool locked_course;
     float locked_course_err;
 } steer_state = {
-	hold_course_cd    : -1,
+    hold_course_cd    : -1,
     locked_course     : false,
     locked_course_err : 0
 };
@@ -642,13 +644,13 @@ static struct {
     // total angle completed in the loiter so far
     int32_t sum_cd;
 
-	// Direction for loiter. 1 for clockwise, -1 for counter-clockwise
+    // Direction for loiter. 1 for clockwise, -1 for counter-clockwise
     int8_t direction;
 
-	// start time of the loiter.  Milliseconds.
+    // start time of the loiter.  Milliseconds.
     uint32_t start_time_ms;
 
-	// The amount of time we should stay in a loiter for the Loiter Time command.  Milliseconds.
+    // The amount of time we should stay in a loiter for the Loiter Time command.  Milliseconds.
     uint32_t time_max_ms;
 } loiter;
 
@@ -750,6 +752,10 @@ static AP_Mount camera_mount(&current_loc, ahrs, 0);
 static AP_Mount camera_mount2(&current_loc, ahrs, 1);
 #endif
 
+//parachute class setup
+static AP_OT_Parachute parachute;
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Arming/Disarming mangement class
 ////////////////////////////////////////////////////////////////////////////////
@@ -784,7 +790,7 @@ static const AP_Scheduler::Task scheduler_tasks[] PROGMEM = {
     { obc_fs_check,           5,   1000 },
     { gcs_update,             1,   1700 },
     { gcs_data_stream_send,   1,   3000 },
-    { update_events,		  1,   1500 }, // 20
+    { update_events,          1,   1500 }, // 20
     { check_usb_mux,          5,    300 },
     { read_battery,           5,   1000 },
     { compass_accumulate,     1,   1500 },
@@ -801,9 +807,10 @@ static const AP_Scheduler::Task scheduler_tasks[] PROGMEM = {
     { update_logging1,        5,   1700 },
     { update_logging2,        5,   1700 },
 #if FRSKY_TELEM_ENABLED == ENABLED
-    { telemetry_send,        10,    100 },	
+    { telemetry_send,        10,    100 },    
 #endif
     { terrain_update,         5,    500 },
+    { parachute_update,          1,   2000 }
 };
 
 // setup the var_info table
@@ -890,9 +897,9 @@ static void ahrs_update()
 static void update_speed_height(void)
 {
     if (auto_throttle_mode) {
-	    // Call TECS 50Hz update. Note that we call this regardless of
-	    // throttle suppressed, as this needs to be running for
-	    // takeoff detection
+        // Call TECS 50Hz update. Note that we call this regardless of
+        // throttle suppressed, as this needs to be running for
+        // takeoff detection
         SpdHgt_Controller->update_50hz(relative_altitude());
     }
 }
@@ -1504,6 +1511,11 @@ static void update_flight_stage(void)
 
     // tell AHRS the airspeed to true airspeed ratio
     airspeed.set_EAS2TAS(barometer.get_EAS2TAS());
+}
+
+static void parachute_update()
+{
+    parachute.update(adjusted_altitude_cm());
 }
 
 AP_HAL_MAIN();
