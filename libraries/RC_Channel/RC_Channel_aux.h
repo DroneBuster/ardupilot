@@ -1,7 +1,7 @@
 // -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 
-/// @file	RC_Channel_aux.h
-/// @brief	RC_Channel manager for auxiliary channels (5..8), with EEPROM-backed storage of constants.
+/// @file    RC_Channel_aux.h
+/// @brief    RC_Channel manager for auxiliary channels (5..8), with EEPROM-backed storage of constants.
 /// @author Amilcar Lucas
 
 #ifndef __RC_CHANNEL_AUX_H__
@@ -16,8 +16,8 @@
 #define RC_AUX_MAX_CHANNELS 8
 #endif
 
-/// @class	RC_Channel_aux
-/// @brief	Object managing one aux. RC channel (CH5-8), with information about its function
+/// @class    RC_Channel_aux
+/// @brief    Object managing one aux. RC channel (CH5-8), with information about its function
 class RC_Channel_aux : public RC_Channel {
 public:
     /// Constructor
@@ -34,7 +34,7 @@ public:
                 break;
             }
         }
-		AP_Param::setup_object_defaults(this, var_info);
+        AP_Param::setup_object_defaults(this, var_info);
     }
 
     typedef enum
@@ -67,6 +67,8 @@ public:
         k_flaperon2             = 25,            ///< flaperon, right wing
         k_steering              = 26,            ///< ground steering, used to separate from rudder
         k_parachute_release     = 27,            ///< parachute release
+        k_ot_parachute_release    = 28,            ///<OT parachute release
+        k_ignition_control        = 29,            ///<igintio controll
         k_nr_aux_servo_functions         ///< This must be the last enum value (only add new values _before_ this one)
     } Aux_servo_function_t;
 
@@ -78,39 +80,39 @@ public:
     // output all auxillary channels
     static void     output_ch_all(void);
 
-	// set radio_out for a function channel
-	static void set_radio(Aux_servo_function_t function, int16_t value);
+    // set radio_out for a function channel
+    static void set_radio(Aux_servo_function_t function, int16_t value);
 
-	// set and save the trim for a function channel to radio_in
-	static void set_radio_trim(Aux_servo_function_t function);
+    // set and save the trim for a function channel to radio_in
+    static void set_radio_trim(Aux_servo_function_t function);
 
-	// set radio_out to radio_min
-	static void set_radio_to_min(Aux_servo_function_t function);
+    // set radio_out to radio_min
+    static void set_radio_to_min(Aux_servo_function_t function);
 
-	// set radio_out to radio_max
-	static void set_radio_to_max(Aux_servo_function_t function);
+    // set radio_out to radio_max
+    static void set_radio_to_max(Aux_servo_function_t function);
 
-	// set radio_out to radio_trim
-	static void set_radio_to_trim(Aux_servo_function_t function);
+    // set radio_out to radio_trim
+    static void set_radio_to_trim(Aux_servo_function_t function);
 
-	// copy radio_in to radio_out
-	static void copy_radio_in_out(Aux_servo_function_t function, bool do_input_output=false);
+    // copy radio_in to radio_out
+    static void copy_radio_in_out(Aux_servo_function_t function, bool do_input_output=false);
 
-	// set servo_out
-	static void set_servo_out(Aux_servo_function_t function, int16_t value);
+    // set servo_out
+    static void set_servo_out(Aux_servo_function_t function, int16_t value);
 
-	// setup failsafe for an auxillary channel function
-	static void set_servo_failsafe(Aux_servo_function_t function, RC_Channel::LimitValue limit);
+    // setup failsafe for an auxillary channel function
+    static void set_servo_failsafe(Aux_servo_function_t function, RC_Channel::LimitValue limit);
 
-	// set servo to a LimitValue
-	static void set_servo_limit(Aux_servo_function_t function, RC_Channel::LimitValue limit);
+    // set servo to a LimitValue
+    static void set_servo_limit(Aux_servo_function_t function, RC_Channel::LimitValue limit);
 
-	// return true if a function is assigned to a channel
-	static bool function_assigned(Aux_servo_function_t function);
+    // return true if a function is assigned to a channel
+    static bool function_assigned(Aux_servo_function_t function);
 
-	// set a servo_out value, and angle range, then calc_pwm
-	static void move_servo(Aux_servo_function_t function,
-						   int16_t value, int16_t angle_min, int16_t angle_max);
+    // set a servo_out value, and angle range, then calc_pwm
+    static void move_servo(Aux_servo_function_t function,
+                           int16_t value, int16_t angle_min, int16_t angle_max);
 
     static const struct AP_Param::GroupInfo        var_info[];
 
