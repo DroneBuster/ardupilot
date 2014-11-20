@@ -810,7 +810,7 @@ static const AP_Scheduler::Task scheduler_tasks[] PROGMEM = {
     { telemetry_send,        10,    100 },    
 #endif
     { terrain_update,         5,    500 },
-    { parachute_update,          1,   2000 }
+    { parachute_update,       1,   2000 }
 };
 
 // setup the var_info table
