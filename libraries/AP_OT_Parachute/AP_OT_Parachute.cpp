@@ -46,9 +46,12 @@ const AP_Param::GroupInfo AP_OT_Parachute::var_info[] PROGMEM = {
     AP_GROUPEND
 };
 
-void AP_OT_Parachute::enable_FS(bool state)
+void AP_OT_Parachute::enable_FS(int8_t state)
 {
-    _enabled_FS = state;
+    if (state == FS_ON)
+        _enabled_FS = true;
+    else if (state == FS_OFF)
+        _enabled_FS = false;
 }
 
 void AP_OT_Parachute::release(uint16_t delay, uint8_t tries, uint16_t time)
@@ -66,6 +69,48 @@ void AP_OT_Parachute::release(uint16_t delay)
     _release_tries = 0;
     _release_toggle_time = 0;
     _release_time = hal.scheduler->millis();
+    _to_release = true;
+}
+
+void AP_OT_Parachute::set_ignition(int8_t state)
+{
+    if (state == IGNITION_ON && !_ignition_on)
+    {
+        RC_Channel_aux::set_radio_to_max(RC_Channel_aux::k_ignition_control);
+        _ignition_on = true;
+    }
+    else if (state == IGNITION_OFF && _ignition_on)
+    {
+        RC_Channel_aux::set_radio_to_min(RC_Channel_aux::k_ignition_control);
+        _ignition_on = false;
+    }
+
+}
+
+void AP_OT_Parachute::reset(void)
+{
+    _released = false;
+    _to_release = false;
+    _release_time = 0;
+    _release_delay = 0;
+    _release_tries = 0;
+    _release_toggle_time = 0;
+}
+
+void AP_OT_Parachute::set_parachute_servo(int8_t state)
+{
+    if (state == SERVO_CLOSED && _open)
+    {
+        RC_Channel_aux::set_radio_to_max(RC_Channel_aux::k_ot_parachute_release); //close servo
+        _open = false;
+        _released = false; //Galbut daryti reset ar pan
+        AP_Notify::flags.parachute_release = 0;
+    }
+    else if (state == SERVO_OPEN && !_open)
+    {
+        RC_Channel_aux::set_radio_to_min(RC_Channel_aux::k_ot_parachute_release); //open servo
+        _open = true;
+    }
 }
 
 void AP_OT_Parachute::update(int32_t altitude)
@@ -76,18 +121,21 @@ void AP_OT_Parachute::update(int32_t altitude)
 
     if (!_released && !_to_release && _enabled_FS)
     {
-        if ( _fs_height * 100 > altitude) release(1000, 3, 500);
+        if ( _fs_height * 100 > altitude) release(1000, 3, 500); // Hard coded maybe params?
     }
-    else if (_to_release)
+
+    if (_to_release)
     {
-        RC_Channel_aux::set_radio_to_min(RC_Channel_aux::k_ignition_control); //turn ignition off
-        //we need to turn throttle off
+        set_ignition(IGNITION_OFF);
+
+        //we need to turn throttle off for electric
+
         if (uint16_t(time - _release_time) > _release_delay)
         {
             _released = true;
             _to_release = false;
             _last_toggle = time;
-            AP_Notify::flags.parachute_release = 1;           //reikia nuli kazkada nustatyti :) 
+            AP_Notify::flags.parachute_release = 1; 
         }
     }
 
@@ -97,26 +145,16 @@ void AP_OT_Parachute::update(int32_t altitude)
         {
             if (_open)
             {
-                RC_Channel_aux::set_radio_to_max(RC_Channel_aux::k_ot_parachute_release); //close servo
-                _open = false;
+                set_parachute_servo(SERVO_CLOSED);
                 _release_tries = _release_tries - 1;
             }
             else
-            {
-                RC_Channel_aux::set_radio_to_min(RC_Channel_aux::k_ot_parachute_release); //open servo
-                _open = true;
-            }
+                set_parachute_servo(SERVO_OPEN);
             _last_toggle = time;
         }
         else if (_release_tries <= 0)
-        {
-            RC_Channel_aux::set_radio_to_min(RC_Channel_aux::k_ot_parachute_release); //open servo
-            _open = true;
-        }
+            set_parachute_servo(SERVO_OPEN);
     }
     else
-    {
-        RC_Channel_aux::set_radio_to_max(RC_Channel_aux::k_ot_parachute_release);
-        _open = false;
-    }
+        set_parachute_servo(SERVO_CLOSED);
 }
