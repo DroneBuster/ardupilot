@@ -179,6 +179,11 @@ static void init_ardupilot()
     init_rc_in();               // sets up rc channels from radio
     init_rc_out();              // sets up the timer libs
 
+
+    parachute.set_ignition(IGNITION_ON);
+    parachute.set_parachute_servo(SERVO_CLOSED);
+    parachute.set_gimbal_pos(GIMBAL_UP);
+
     relay.init();
 
 #if FENCE_TRIGGERED_PIN > 0

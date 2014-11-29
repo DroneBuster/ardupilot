@@ -67,8 +67,9 @@ public:
         k_flaperon2             = 25,            ///< flaperon, right wing
         k_steering              = 26,            ///< ground steering, used to separate from rudder
         k_parachute_release     = 27,            ///< parachute release
-        k_ot_parachute_release    = 28,            ///<OT parachute release
-        k_ignition_control        = 29,            ///<igintio controll
+        k_ot_parachute_release  = 28,            ///<OT parachute release
+        k_ignition_control      = 29,            ///igintiot controll
+        k_gimbal_retract        = 30,           ///Gimbal retract servo
         k_nr_aux_servo_functions         ///< This must be the last enum value (only add new values _before_ this one)
     } Aux_servo_function_t;
 

@@ -23,7 +23,7 @@ const AP_Param::GroupInfo AP_OT_Parachute::var_info[] PROGMEM = {
     // @Units: pwm
     // @Increment: 1
     // @User: Advanced
-    AP_GROUPINFO("SERVO_ON", 1, AP_OT_Parachute, _servo_on_pwm, AP_OT_PARACHUTE_SERVO_ON_PWM_DEFAULT),
+    AP_GROUPINFO("GMB_DWN", 1, AP_OT_Parachute, _servo_gmb_dwn, AP_OT_PARACHUTE_SERVO_GMB_DWN_DEFAULT),
 
     // @Param: SERVO_OFF
     // @DisplayName: Parachute Servo OFF PWM value
@@ -32,7 +32,7 @@ const AP_Param::GroupInfo AP_OT_Parachute::var_info[] PROGMEM = {
     // @Units: pwm
     // @Increment: 1
     // @User: Advanced
-    AP_GROUPINFO("SERVO_OFF", 2, AP_OT_Parachute, _servo_off_pwm, AP_OT_PARACHUTE_SERVO_OFF_PWM_DEFAULT),
+    AP_GROUPINFO("GMB_UP", 2, AP_OT_Parachute, _servo_gmb_up, AP_OT_PARACHUTE_SERVO_GMB_UP_DEFAULT),
 
     // @Param: FS_HEIGHT
     // @DisplayName: Parachute FS height
@@ -85,6 +85,32 @@ void AP_OT_Parachute::set_ignition(int8_t state)
         _ignition_on = false;
     }
 
+}
+
+void AP_OT_Parachute::set_parachute_servo(int8_t state)
+{
+    if (state == SERVO_CLOSED/* && _open*/)
+    {
+        RC_Channel_aux::set_radio_to_max(RC_Channel_aux::k_ot_parachute_release); //close servo
+        _open = false;
+        //AP_Notify::flags.parachute_release = 0;
+    }
+    else if (state == SERVO_OPEN/* && !_open*/)
+    {
+        RC_Channel_aux::set_radio_to_min(RC_Channel_aux::k_ot_parachute_release); //open servo
+        _open = true;
+    }
+}
+
+void AP_OT_Parachute::set_gimbal_pos(int8_t state)
+{
+    if (state == GIMBAL_DOWN)
+        _gimbal_pwm = _servo_gmb_dwn;
+
+    else if (state == GIMBAL_UP)
+        _gimbal_pwm = _servo_gmb_up;
+
+    _gimb_state = state;
 }
 
 /*void AP_OT_Parachute::control_msg(mavlink_message_t* msg)
@@ -140,20 +166,7 @@ void AP_OT_Parachute::reset(void)
     _release_toggle_time = 0;
 }
 
-void AP_OT_Parachute::set_parachute_servo(int8_t state)
-{
-    if (state == SERVO_CLOSED/* && _open*/)
-    {
-        RC_Channel_aux::set_radio_to_max(RC_Channel_aux::k_ot_parachute_release); //close servo
-        _open = false;
-        //AP_Notify::flags.parachute_release = 0;
-    }
-    else if (state == SERVO_OPEN/* && !_open*/)
-    {
-        RC_Channel_aux::set_radio_to_min(RC_Channel_aux::k_ot_parachute_release); //open servo
-        _open = true;
-    }
-}
+
 
 void AP_OT_Parachute::update(int32_t altitude)
 {
@@ -163,14 +176,15 @@ void AP_OT_Parachute::update(int32_t altitude)
 
     if (!_released && !_to_release && _enabled_FS)
     {
-        if ( _fs_height * 100 > altitude) release(1000, 3, 500); // Hard coded maybe params?
+        if ( _fs_height * 100 > altitude) release(2000, 3, 1000); // Hard coded maybe params?
     }
 
     if (_to_release)
     {
         set_ignition(IGNITION_OFF);
+        set_gimbal_pos(GIMBAL_UP);
 
-        //we need to turn throttle off for electric
+        //we need to turn throttle off for electric maybe new mode?
 
         if (uint16_t(time - _release_time) > _release_delay)
         {
@@ -200,6 +214,13 @@ void AP_OT_Parachute::update(int32_t altitude)
         else if (_release_tries <= 0)
             set_parachute_servo(SERVO_OPEN);
     }
-   /* else
-        set_parachute_servo(SERVO_CLOSED);*/
+
+    float tmp = 500.0f * 0.02f; //100 pwm per second
+    if (tmp < 1)
+        tmp = 1;
+    _gimbal_pwm = constrain_int16(_gimbal_pwm, _last_gimb_pos - tmp, _last_gimb_pos + tmp);
+    _last_gimb_pos = _gimbal_pwm;
+
+    RC_Channel_aux::set_radio(RC_Channel_aux::k_gimbal_retract, _gimbal_pwm);
+    set_gimbal_pos(_gimb_state);
 }

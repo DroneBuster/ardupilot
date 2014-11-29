@@ -10,8 +10,8 @@
 #include <AP_Common.h>
 #include <GCS_MAVLink.h>
 
-#define AP_OT_PARACHUTE_SERVO_ON_PWM_DEFAULT 1900
-#define AP_OT_PARACHUTE_SERVO_OFF_PWM_DEFAULT 1100
+#define AP_OT_PARACHUTE_SERVO_GMB_DWN_DEFAULT 1800
+#define AP_OT_PARACHUTE_SERVO_GMB_UP_DEFAULT 1100
 #define AP_OT_PARACHUTE_FS_HEIGHT_DEFAULT 150
 
 typedef enum PARACHUTE_SERVO_STATE{
@@ -32,6 +32,12 @@ typedef enum PARACHUTE_FS_STATE{
     FS_OFF = 2
 } PARACHUTE_FS_STATE;
 
+typedef enum GIMBAL_RETRACT{
+    NO_CHANGE,
+    GIMBAL_DOWN = 1,
+    GIMBAL_UP = 2
+} GIMBAL_RETRACT;
+
 /// @class    AP_Parachute
 /// @brief    Class managing the release of a parachute and parachute FS
 
@@ -51,6 +57,7 @@ public:
         _release_toggle_time = 0;
         _open = false;
         _ignition_on = false;
+        _last_gimb_pos = 1500;
         AP_Param::setup_object_defaults(this, var_info);
     }
 
@@ -70,6 +77,9 @@ public:
 
     ///set parachute servo only
     void set_parachute_servo(int8_t state); // -1 - open, 1 - closed
+
+    ///set gimbal position
+    void set_gimbal_pos(int8_t state);
 
     ///Handling of MAVLINK CMD command
    // void control_msg(mavlink_message_t* msg);
@@ -94,19 +104,21 @@ private:
     bool _enabled_FS;
     bool _open;
     bool _ignition_on;
+    uint8_t _gimb_state;
     uint32_t _release_time; //time when release sequance is started
     uint16_t _release_delay;
     uint8_t _release_tries;
     uint16_t _release_toggle_time;
     uint32_t _last_toggle;
+    int16_t _last_gimb_pos; //last gimbal position
+    int16_t _gimbal_pwm; //gimbal pwm
     
 
     // Parameter
     AP_Int8 _enabled;
-    AP_Int16 _servo_on_pwm;
-    AP_Int16 _servo_off_pwm;
-    AP_Int16 _fs_height;
-    
+    AP_Int16 _servo_gmb_dwn;
+    AP_Int16 _servo_gmb_up;
+    AP_Int16 _fs_height; 
 
 };
 
