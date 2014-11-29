@@ -15,18 +15,21 @@
 #define AP_OT_PARACHUTE_FS_HEIGHT_DEFAULT 150
 
 typedef enum PARACHUTE_SERVO_STATE{
-    SERVO_OPEN,
-    SERVO_CLOSED
+    SERVO_NO_CHANGE = 0,
+    SERVO_CLOSED = 1,
+    SERVO_OPEN = 2
 }PARACHUTE_SERVO_STATE;
 
 typedef enum IGNITION_STATE{
-    IGNITION_OFF,
-    IGNITION_ON
+    IGNITION_NO_CHANGE = 0,
+    IGNITION_ON = 1,
+    IGNITION_OFF = 2
 }IGNITION_STATE;
 
 typedef enum PARACHUTE_FS_STATE{
-    FS_ON,
-    FS_OFF
+    FS_NO_CHANGE,
+    FS_ON = 1,
+    FS_OFF = 2
 } PARACHUTE_FS_STATE;
 
 /// @class    AP_Parachute
@@ -69,7 +72,8 @@ public:
     void set_parachute_servo(int8_t state); // -1 - open, 1 - closed
 
     ///Handling of MAVLINK CMD command
-    void control_msg(mavlink_message_t* msg);
+   // void control_msg(mavlink_message_t* msg);
+    void control_msg(int8_t p1, int8_t p2, int8_t p3, int8_t p4);
 
     ///if parachute is realesed
     bool release() const { return _released; }

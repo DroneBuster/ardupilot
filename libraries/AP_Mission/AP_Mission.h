@@ -121,6 +121,13 @@ public:
         float meters;           // distance
     };
 
+    struct PACKED Parachute_Control{
+        uint8_t fs_state;
+        uint8_t land;
+        uint8_t ignition_state;
+        uint8_t servo_state;
+    };
+
     union PACKED Content {
         // Nav_Guided_Command
         Nav_Guided_Command nav_guided;
@@ -157,6 +164,9 @@ public:
 
         // cam trigg distance
         Cam_Trigg_Distance cam_trigg_dist;
+
+        // nav ot parachute
+        Parachute_Control parachute_control;
 
         // location
         Location location;      // Waypoint location
