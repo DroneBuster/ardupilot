@@ -305,6 +305,9 @@ public:
         k_param_pidWheelSteer, // unused
         k_param_parachute,
 
+		k_param_takeoff_speed = 250,
+		k_param_takeoff_start_pitch,
+
         // 254,255: reserved
     };
 
@@ -403,6 +406,11 @@ public:
     AP_Int8 flight_mode4;
     AP_Int8 flight_mode5;
     AP_Int8 flight_mode6;
+
+	// Auto takeof
+	//
+	AP_Int8 takeoff_speed; //in m/s
+	AP_Int16 takeoff_start_pitch; //in degrees  
 
     // Navigational maneuvering limits
     //
