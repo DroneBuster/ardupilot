@@ -407,17 +407,11 @@ public:
     AP_Int8 flight_mode5;
     AP_Int8 flight_mode6;
 
-<<<<<<< HEAD
     // Auto takeof
     //
     AP_Int8 takeoff_speed; //in m/s
     AP_Int16 takeoff_start_pitch; //in degrees  
-=======
-	// Auto takeof
-	//
-	AP_Int8 takeoff_speed; //in m/s
-	AP_Int16 takeoff_start_pitch; //in degrees  
->>>>>>> 7f82b1e70d6b541820c2c515d443a6dbcb070ff7
+
 
     // Navigational maneuvering limits
     //
