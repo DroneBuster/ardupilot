@@ -688,6 +688,24 @@ const AP_Param::Info var_info[] PROGMEM = {
     // @User: Advanced
     GSCALAR(ground_steer_dps,         "GROUND_STEER_DPS",  90),
 
+    // @Param: TAKEOFF_SPEED
+    // @DisplayName: Takeoff speed
+    // @Description: After reaching this speed, plane starts pitching up
+    // @Units: m/s
+    // @Range: 0 255
+    // @Increment: 1
+    // @User: Advanced
+    GSCALAR(takeoff_speed, "TAKEOFF_SPEED", 10),
+    
+    // @Param: TAKEOFF_S_PITCH
+    // @DisplayName: Angle to which plane pitches
+    // @Description: When plane reaches speed set in TAKEOFF_SPEED plane starts pitching up and min pitch angle is this parameter
+    // @Units: degrees
+    // @Range: 0 32768
+    // @Increment: 1
+    // @User: Advanced
+    GSCALAR(takeoff_start_pitch, "TAKEOFF_S_PITCH", 10),
+
     // @Param: TRIM_AUTO
     // @DisplayName: Automatic trim adjustment
     // @Description: Set RC trim PWM levels to current levels when switching away from manual mode. When this option is enabled and you change from MANUAL to any other mode then the APM will take the current position of the control sticks as the trim values for aileron, elevator and rudder. It will use those to set RC1_TRIM, RC2_TRIM and RC4_TRIM. This option is disabled by default as if a pilot is not aware of this option and changes from MANUAL to another mode while control inputs are not centered then the trim could be changed to a dangerously bad value. You can enable this option to assist with trimming your plane, by enabling it before takeoff then switching briefly to MANUAL in flight, and seeing how the plane reacts. You can then switch back to FBWA, trim the surfaces then again test MANUAL mode. Each time you switch from MANUAL the APM will take your control inputs as the new trim. After you have good trim on your aircraft you can disable TRIM_AUTO for future flights.

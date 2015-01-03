@@ -121,8 +121,20 @@ static void takeoff_calc_pitch(void)
             nav_pitch_cd = auto_state.takeoff_pitch_cd;
         }
     } else {
-        nav_pitch_cd = ((gps.ground_speed()*100) / (float)g.airspeed_cruise_cm) * auto_state.takeoff_pitch_cd;
-        nav_pitch_cd = constrain_int32(nav_pitch_cd, 500, auto_state.takeoff_pitch_cd);
+        if (g.takeoff_speed != 0) {
+            if (gps.ground_speed > g.takeoff_speed || takeoff_speed_trigered) {
+                nav_pitch_cd = ((gps.ground_speed() * 100) / (float)g.airspeed_cruise_cm) * auto_state.takeoff_pitch_cd;
+                nav_pitch_cd = constrain_int32(nav_pitch_cd, 500, auto_state.takeoff_pitch_cd);
+                takeoff_speed_trigered = true; //to reset full reset needed
+            }
+            else {
+                nav_pitch_cd = -45;
+            }
+        }
+        else {
+            nav_pitch_cd = ((gps.ground_speed() * 100) / (float)g.airspeed_cruise_cm) * auto_state.takeoff_pitch_cd;
+            nav_pitch_cd = constrain_int32(nav_pitch_cd, 500, auto_state.takeoff_pitch_cd);
+        }
     }
 }
 

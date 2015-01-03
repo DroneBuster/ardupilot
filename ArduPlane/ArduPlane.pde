@@ -1,6 +1,6 @@
 /// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 
-#define THISFIRMWARE "ArduPlane V3.1.1"
+#define THISFIRMWARE "ArduPlane V3.1.1-KMTI"
 /*
    Lead developer: Andrew Tridgell
  
@@ -456,6 +456,7 @@ static int16_t throttle_nudge = 0;
 // receiver RSSI
 static uint8_t receiver_rssi;
 
+static bool takeoff_speed_trigered = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Ground speed
