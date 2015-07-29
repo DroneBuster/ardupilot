@@ -283,6 +283,7 @@ static void do_takeoff(const AP_Mission::Mission_Command& cmd)
     next_WP_loc.lat = home.lat + 10;
     next_WP_loc.lng = home.lng + 10;
     auto_state.takeoff_complete = false;                            // set flag to use gps ground course during TO.  IMU will be doing yaw drift correction
+    takeoff_speed_trigered = false;
     // Flag also used to override "on the ground" throttle disable
 }
 

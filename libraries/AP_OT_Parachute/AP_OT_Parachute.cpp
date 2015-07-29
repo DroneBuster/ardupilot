@@ -176,7 +176,10 @@ void AP_OT_Parachute::update(int32_t altitude)
 
     if (!_released && !_to_release && _enabled_FS)
     {
-        if ( _fs_height * 100 > altitude) release(2000, 3, 1000); // Hard coded maybe params?
+        if ((int32_t)_fs_height * 100 > altitude)
+        {    
+            release(2000, 3, 1000); // Hard coded maybe params?
+        }
     }
 
     if (_to_release)
