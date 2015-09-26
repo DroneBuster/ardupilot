@@ -82,6 +82,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] PROGMEM = {
     SCHED_TASK(terrain_update,          5,    500),
     SCHED_TASK(update_is_flying_5Hz,   10,    100),
     SCHED_TASK(dataflash_periodic,      1,    300),
+    SCHED_TASK(parachute_update,        1,   2000),
 };
 
 void Plane::setup() 
@@ -907,6 +908,10 @@ void Plane::update_optical_flow(void)
 }
 #endif
 
+void Plane::parachute_update()
+{
+    parachute.update(relative_altitude());
+}
 /*
   compatibility with old pde style build
  */

@@ -3,8 +3,8 @@
 #ifndef _PLANE_H
 #define _PLANE_H
 
-#define THISFIRMWARE "ArduPlane V3.4.0"
-#define FIRMWARE_VERSION 3,4,0,FIRMWARE_VERSION_TYPE_OFFICIAL
+#define THISFIRMWARE "ArduPlane V3.4.0-KMTI"
+#define FIRMWARE_VERSION 3,4,0,FIRMWARE_VERSION_TYPE_DEV
 
 /*
    Lead developer: Andrew Tridgell
@@ -93,6 +93,8 @@
 
 #include <AP_OpticalFlow/AP_OpticalFlow.h>     // Optical Flow library
 #include <AP_RSSI/AP_RSSI.h>                   // RSSI Library
+
+#include <AP_OT_Parachute/AP_OT_Parachute.h>        //Parachute library
 
 // Configuration
 #include "config.h"
@@ -279,7 +281,10 @@ private:
     AP_Rally rally {ahrs};
     
     // RSSI 
-    AP_RSSI rssi;      
+    AP_RSSI rssi;
+
+    // Parachute
+    AP_OT_Parachute parachute;
 
     // remember if USB is connected, so we can adjust baud rate
     bool usb_connected;
@@ -964,6 +969,7 @@ private:
     void init_capabilities(void);
     void dataflash_periodic(void);
     uint16_t throttle_min(void) const;
+    void parachute_update();
     
 public:
     void mavlink_delay_cb();
