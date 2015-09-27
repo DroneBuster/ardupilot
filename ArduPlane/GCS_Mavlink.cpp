@@ -1308,6 +1308,28 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             }
             break;
 
+        case MAV_CMD_OT_PARACHUTE:
+        {
+            if (packet.param1 == 42) // magic reset number
+            {
+                plane.parachute.reset();
+                result = MAV_RESULT_ACCEPTED;
+                break;
+            }
+            plane.parachute.enable_FS((int8_t)packet.param1);
+            if (packet.param2 == 1)
+            {
+                plane.parachute.release(2000, 3, 1000);
+                plane.gcs_send_text_P(MAV_SEVERITY_ALERT, PSTR("land sequence started"));
+            }
+            plane.parachute.set_ignition((int8_t)packet.param3);
+            plane.parachute.set_parachute_servo((int8_t)packet.param4);
+            plane.parachute.set_gimbal_pos((int8_t)packet.param5);
+            plane.gcs_send_text_P(MAV_SEVERITY_INFO, PSTR("parachute command accepted"));
+            result = MAV_RESULT_ACCEPTED;
+            break;
+        }
+
         case MAV_CMD_DO_SET_SERVO:
             if (plane.ServoRelayEvents.do_set_servo(packet.param1, packet.param2)) {
                 result = MAV_RESULT_ACCEPTED;
