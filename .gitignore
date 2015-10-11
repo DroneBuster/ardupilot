@@ -77,3 +77,5 @@ status.txt
 tags
 test.ArduCopter/*
 Thumbs.db
+modules/
+Tools/autotest/*
