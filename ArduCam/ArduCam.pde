@@ -1,3 +1,5 @@
+#define THISFIRMWARE "ArduCam 0.1-alpha"
+
 #define CH_1 0
 #define CH_2 1
 #define CH_3 2
@@ -19,23 +21,91 @@
 #define RADIO_MAX 1900
 #define RADIO_TRIM 1500
 
-#define CAM_OFF_DELAY_MS 4000
+#define CAM_OFF_DELAY_MS 5000
 
-#include <AP_Common.h>
-#include <AP_Progmem.h>
+#include <math.h>
+#include <stdarg.h>
+#include <stdio.h>
+
 #include <AP_HAL.h>
+#include <AP_Common.h>
+#include <Filter.h>                     // Filter library
+#include <AP_Progmem.h>
+#include <AP_Menu.h>
 #include <AP_Param.h>
 #include <StorageManager.h>
-#include <AP_Math.h>
+#include <AP_GPS.h>         // ArduPilot GPS library
+#include <AP_Baro.h>        // ArduPilot barometer library
+#include <AP_Compass.h>     // ArduPilot Mega Magnetometer Library
+#include <AP_Math.h>        // ArduPilot Mega Vector/Matrix math Library
+#include <AP_ADC.h>         // ArduPilot Mega Analog to Digital Converter Library
+#include <AP_ADC_AnalogSource.h>
+#include <AP_InertialSensor.h> // Inertial Sensor Library
+#include <AP_AHRS.h>         // ArduPilot Mega DCM Library
+#include <RC_Channel.h>     // RC Channel Library
+#include <AP_RangeFinder.h>     // Range finder library
+#include <AP_Buffer.h>      // APM FIFO Buffer
+#include <AP_Relay.h>       // APM relay
+#include <AP_Camera.h>          // Photo or video camera
+#include <AP_Airspeed.h>
+#include <AP_Terrain.h>
+
+#include <APM_OBC.h>
+#include <APM_Control.h>
+#include <AP_AutoTune.h>
+#include <GCS.h>
+#include <GCS_MAVLink.h>    // MAVLink GCS definitions
+#include <AP_Mount.h>           // Camera/Antenna mount
+#include <AP_Declination.h> // ArduPilot Mega Declination Helper Library
+#include <DataFlash.h>
+#include <SITL.h>
 #include <AP_Scheduler.h>       // main loop scheduler
+
+#include <AP_Navigation.h>
+#include <AP_L1_Control.h>
+#include <AP_RCMapper.h>        // RC input mapping library
+
+#include <AP_Vehicle.h>
+#include <AP_SpdHgtControl.h>
+#include <AP_TECS.h>
+#include <AP_NavEKF.h>
+#include <AP_Mission.h>     // Mission command library
+
+#include <AP_Notify.h>      // Notify library
+#include <AP_BattMonitor.h> // Battery monitor library
+
+#include <AP_Arming.h>
+#include <AP_BoardConfig.h>
+#include <AP_Frsky_Telem.h>
+#include <AP_ServoRelayEvents.h>
+
+#include <AP_Rally.h>
 
 #include <AP_HAL_AVR.h>
 #include <AP_HAL_AVR_SITL.h>
+#include <AP_HAL_PX4.h>
+#include <AP_HAL_FLYMAPLE.h>
+#include <AP_HAL_Linux.h>
 #include <AP_HAL_Empty.h>
+#include <AP_HAL_VRBRAIN.h>
 
 const AP_HAL::HAL& hal = AP_HAL_BOARD_DRIVER;
 
 static AP_Scheduler scheduler;
+
+////////////////////////////////////////////////////////////////////////////////
+// DataFlash
+////////////////////////////////////////////////////////////////////////////////
+#if CONFIG_HAL_BOARD == HAL_BOARD_APM1
+static DataFlash_APM1 DataFlash;
+#elif CONFIG_HAL_BOARD == HAL_BOARD_APM2
+static DataFlash_APM2 DataFlash;
+#elif defined(HAL_BOARD_LOG_DIRECTORY)
+static DataFlash_File DataFlash(HAL_BOARD_LOG_DIRECTORY);
+#else
+// no dataflash driver
+DataFlash_Empty DataFlash;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // System Timers
@@ -57,21 +127,33 @@ static float G_Dt = 0.02f;
 
 static const AP_Scheduler::Task scheduler_tasks[] PROGMEM = {
     { read_rc,             1,    700},
+    { write_log,          10,    700},
+//    { serial_manage,       1,    700},
+    { debug_rcin,          100,    700},
 };
 
+static void run_cli(AP_HAL::UARTDriver *port);
 
 void setup()
 {
     hal.console->println("ArduPilot RC Channel test");
     hal.scheduler->delay(100);
+    hal.gpio->pinMode(HAL_GPIO_A_LED_PIN, HAL_GPIO_OUTPUT);
+    hal.gpio->pinMode(HAL_GPIO_B_LED_PIN, HAL_GPIO_OUTPUT);
+    hal.gpio->pinMode(HAL_GPIO_C_LED_PIN, HAL_GPIO_OUTPUT);
+    // turn all lights off
+        hal.gpio->write(HAL_GPIO_A_LED_PIN, HAL_GPIO_LED_OFF);
+        hal.gpio->write(HAL_GPIO_B_LED_PIN, HAL_GPIO_LED_OFF);
+        hal.gpio->write(HAL_GPIO_C_LED_PIN, HAL_GPIO_LED_OFF);
     hal.rcout->enable_ch(ON_OFF_SW);
     hal.rcout->write(ON_OFF_SW, 1900);
+    log_init();
     scheduler.init(&scheduler_tasks[0], sizeof(scheduler_tasks)/sizeof(scheduler_tasks[0]));
 }
 
 void loop()
 {
-    hal.scheduler->delay_microseconds(fast_loopTimer_us + 20000 - hal.scheduler->micros());
+    hal.scheduler->delay(20);
     uint32_t timer = hal.scheduler->micros();
 
     delta_us_fast_loop  = timer - fast_loopTimer_us;
@@ -98,6 +180,21 @@ void loop()
     scheduler.run(remaining);
 }
 
+uint8_t crlf_count = 0;
+
+static void serial_manage(void)
+{
+    uint8_t c = hal.console->read();
+    if (c == '\n' || c == '\r') {
+          crlf_count++;
+      } else {
+          crlf_count = 0;
+      }
+      if (crlf_count == 3) {
+          run_cli(hal.console);
+      }
+}
+
 void debug_rcin() {
     uint16_t channels[8];
     hal.rcin->read(channels, 8);
@@ -111,7 +208,6 @@ void debug_rcin() {
         channels[5],
         channels[6],
         channels[7]);
-    hal.console->printf_P(PSTR("gdt: %u\r\n"), G_Dt_max);
 }
 
 void high(unsigned int time, int freq, int pin){
@@ -175,16 +271,17 @@ void read_rc()
     uint16_t on_pwm = hal.rcin->read(ON_OFF);
     uint16_t cam_pwm = hal.rcin->read(CAM_TRIG);
 
-    if(cam_pwm >= 1400){
+    if(cam_pwm >= 1600){
         if(!cam_trig){
             cam_trig = true;
             camera.shutterNow();
+            DataFlash.Log_Write_Message("Taking picture!");
         }
     }
     else if(cam_pwm < 1400)
         cam_trig = false;
 
-    if(on_pwm < 1400){
+    if(on_pwm < 1400 && on_pwm != 900){
         if(cam_on && read_delay >= 200){
             if(cam_on1){
                 hal.rcout->write(ON_OFF_SW, 1100);
@@ -195,6 +292,7 @@ void read_rc()
                 hal.rcout->write(ON_OFF_SW, 1900);
                 delay_time = hal.scheduler->millis() + CAM_OFF_DELAY_MS;
                 cam_on = false;
+                DataFlash.Log_Write_Message("Turning camera off!");
             }
         }
         else if(cam_on)
@@ -202,11 +300,23 @@ void read_rc()
         else if(delay_time <= hal.scheduler->millis())
             hal.rcout->write(ON_OFF_SW, 1100);
     }
-    else if(on_pwm >= 1400){
+    else if(on_pwm >= 1400 || on_pwm == 900){
         cam_on = true;
         cam_on1 = true;
         read_delay = 0;
         hal.rcout->write(ON_OFF_SW, 1900);
     }
+
+    if(cam_on)
+        hal.gpio->write(HAL_GPIO_C_LED_PIN, HAL_GPIO_LED_ON);
+    else
+        hal.gpio->write(HAL_GPIO_C_LED_PIN, HAL_GPIO_LED_OFF);
+}
+
+static void write_log(void) {
+    //Log_Write_Performance();
+    DataFlash.Log_Write_RCIN();
+    DataFlash.Log_Write_RCOUT();
+
 }
 AP_HAL_MAIN();
