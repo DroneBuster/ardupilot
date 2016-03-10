@@ -1158,6 +1158,7 @@ void Plane::set_servos(void)
         // damper to operate.
         channel_roll->output();
     }
+    RC_Channel_aux::set_radio(RC_Channel_aux::k_throttle, channel_throttle->radio_out);
     channel_pitch->output();
     channel_throttle->output();
     channel_rudder->output();
