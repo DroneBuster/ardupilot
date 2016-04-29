@@ -18,6 +18,7 @@
 
 #define AP_CAMERA_TRIGGER_TYPE_SERVO                0
 #define AP_CAMERA_TRIGGER_TYPE_RELAY                1
+#define AP_CAMERA_TRIGGER_TYPE_SEAGUL               2
 
 #define AP_CAMERA_TRIGGER_DEFAULT_TRIGGER_TYPE  AP_CAMERA_TRIGGER_TYPE_SERVO    // default is to use servo to trigger camera
 
@@ -41,6 +42,7 @@ public:
     {
 		AP_Param::setup_object_defaults(this, var_info);
         _apm_relay = obj_relay;
+        _camera_on = true;
     }
 
     // single entry point to take pictures
@@ -85,8 +87,10 @@ private:
 
     void            servo_pic();        // Servo operated camera
     void            relay_pic();        // basic relay activation
+    void            seagull_pic();       // Seagull UAV #MAP trigger
     void            feedback_pin_timer();
     void            setup_feedback_callback(void);
+    void            set_camera_power(bool state); //true - camera on, false - camera off
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
     static void     capture_callback(void *context, uint32_t chan_index,
                                      hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow);
@@ -107,4 +111,6 @@ private:
     static volatile bool   _camera_triggered;
     bool            _timer_installed:1;
     uint8_t         _last_pin_state;
+
+    bool _camera_on;
 };

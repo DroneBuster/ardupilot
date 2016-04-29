@@ -21,7 +21,7 @@ const AP_Param::GroupInfo AP_Camera::var_info[] = {
     // @Param: TRIGG_TYPE
     // @DisplayName: Camera shutter (trigger) type
     // @Description: how to trigger the camera to take a picture
-    // @Values: 0:Servo,1:Relay
+    // @Values: 0:Servo,1:Relay,2:SeagulMAP
     // @User: Standard
     AP_GROUPINFO("TRIGG_TYPE",  0, AP_Camera, _trigger_type, AP_CAMERA_TRIGGER_DEFAULT_TRIGGER_TYPE),
 
@@ -128,6 +128,37 @@ AP_Camera::relay_pic()
     _trigger_counter = constrain_int16(_trigger_duration*5,0,255);
 }
 
+/// Seagull UAV #MAP trigger
+void
+AP_Camera::seagull_pic()
+{
+    RC_Channel_aux::set_radio(RC_Channel_aux::k_cam_trigger, _servo_on_pwm);
+
+    // leave a message that it should be active for this many loops (assumes 50hz loops)
+    _trigger_counter = constrain_int16(_trigger_duration*5,0,255);
+
+    _camera_on = true;
+}
+
+void
+AP_Camera::set_camera_power(bool state)
+{
+    if(state && !_camera_on)
+    {
+        RC_Channel_aux::set_radio(RC_Channel_aux::k_cam_trigger, 1100);
+        // this should be active this many loops
+        _trigger_counter = constrain_int16(10*5,0,255);
+        _camera_on = true;
+    }
+    else if(!state && _camera_on)
+    {
+        RC_Channel_aux::set_radio(RC_Channel_aux::k_cam_trigger, 1100);
+        // this should be active this many loops
+        _trigger_counter = constrain_int16(10*5,0,255);
+        _camera_on = false;
+    }
+}
+
 /// single entry point to take pictures
 ///  set send_mavlink_msg to true to send DO_DIGICAM_CONTROL message to all components
 void
@@ -143,6 +174,9 @@ AP_Camera::trigger_pic(bool send_mavlink_msg)
         break;
     case AP_CAMERA_TRIGGER_TYPE_RELAY:
         relay_pic();                    // basic relay activation
+        break;
+    case AP_CAMERA_TRIGGER_TYPE_SEAGUL:
+        seagull_pic();
         break;
     }
 
@@ -179,6 +213,9 @@ AP_Camera::trigger_pic_cleanup()
                 } else {
                     _apm_relay->on(0);
                 }
+                break;
+            case AP_CAMERA_TRIGGER_TYPE_SEAGUL:
+                RC_Channel_aux::set_radio(RC_Channel_aux::k_cam_trigger, _servo_off_pwm);
                 break;
         }
     }
@@ -227,6 +264,13 @@ bool AP_Camera::control(float session, float zoom_pos, float zoom_step, float fo
     if (is_equal(shooting_cmd,1.0f)) {
         trigger_pic(false);
         ret = true;
+    }
+
+    if(is_equal(session, 1.0f)) {
+        set_camera_power(true);
+    }
+    else if(is_equal(session, 2.0f)) {
+        set_camera_power(false);
     }
 
     mavlink_message_t msg;
