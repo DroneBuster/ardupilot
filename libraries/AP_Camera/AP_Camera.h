@@ -44,7 +44,7 @@ public:
 
     // single entry point to take pictures
     //  set send_mavlink_msg to true to send DO_DIGICAM_CONTROL message to all components
-    void            trigger_pic(bool send_mavlink_msg);
+    bool            trigger_pic(bool send_mavlink_msg);
 
     // de-activate the trigger after some delay, but without using a delay() function
     // should be called at 50hz from main program
@@ -82,9 +82,9 @@ private:
     uint8_t         _trigger_counter;   // count of number of cycles shutter has been held open
     AP_Relay       *_apm_relay;         // pointer to relay object from the base class Relay.
 
-    void            servo_pic();        // Servo operated camera
-    void            relay_pic();        // basic relay activation
-    void            seagull_pic();       // Seagull UAV #MAP trigger
+    bool            servo_pic();        // Servo operated camera
+    bool            relay_pic();        // basic relay activation
+    bool            seagull_pic();       // Seagull UAV #MAP trigger
     void            feedback_pin_timer();
     void            setup_feedback_callback(void);
     void            set_camera_power(bool state); //true - camera on, false - camera off

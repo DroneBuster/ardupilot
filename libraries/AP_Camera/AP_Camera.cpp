@@ -92,17 +92,18 @@ const AP_Param::GroupInfo AP_Camera::var_info[] = {
 extern const AP_HAL::HAL& hal;
 
 /// Servo operated camera
-void
+bool
 AP_Camera::servo_pic()
 {
 	RC_Channel_aux::set_radio(RC_Channel_aux::k_cam_trigger, _servo_on_pwm);
 
 	// leave a message that it should be active for this many loops (assumes 50hz loops)
 	_trigger_counter = constrain_int16(_trigger_duration*5,0,255);
+	return true;
 }
 
 /// basic relay activation
-void
+bool
 AP_Camera::relay_pic()
 {
     if (_relay_on) {
@@ -113,10 +114,11 @@ AP_Camera::relay_pic()
 
     // leave a message that it should be active for this many loops (assumes 50hz loops)
     _trigger_counter = constrain_int16(_trigger_duration*5,0,255);
+    return true;
 }
 
 /// Seagull UAV #MAP trigger
-void
+bool
 AP_Camera::seagull_pic()
 {
     RC_Channel_aux::set_radio(RC_Channel_aux::k_cam_trigger, _servo_on_pwm);
@@ -124,7 +126,11 @@ AP_Camera::seagull_pic()
     // leave a message that it should be active for this many loops (assumes 50hz loops)
     _trigger_counter = constrain_int16(_trigger_duration*5,0,255);
 
-    _camera_on = true;
+    if(!_camera_on) {
+        _camera_on = true;
+        return false;
+    }
+    return true;
 }
 
 void
@@ -148,7 +154,7 @@ AP_Camera::set_camera_power(bool state)
 
 /// single entry point to take pictures
 ///  set send_mavlink_msg to true to send DO_DIGICAM_CONTROL message to all components
-void
+bool
 AP_Camera::trigger_pic(bool send_mavlink_msg)
 {
     if (_feedback_pin > 0 && !_timer_installed) {
@@ -156,18 +162,20 @@ AP_Camera::trigger_pic(bool send_mavlink_msg)
         _timer_installed = true;
         hal.scheduler->register_timer_process(FUNCTOR_BIND_MEMBER(&AP_Camera::feedback_pin_timer, void));
     }
+    bool ret = false;
+    setup_feedback_callback();
 
     _image_index++;
     switch (_trigger_type)
     {
     case AP_CAMERA_TRIGGER_TYPE_SERVO:
-        servo_pic();                    // Servo operated camera
+        ret = servo_pic();               // Servo operated camera
         break;
     case AP_CAMERA_TRIGGER_TYPE_RELAY:
-        relay_pic();                    // basic relay activation
+        ret = relay_pic();               // basic relay activation
         break;
     case AP_CAMERA_TRIGGER_TYPE_SEAGUL:
-        seagull_pic();
+        ret = seagull_pic();
         break;
     }
 
@@ -184,6 +192,7 @@ AP_Camera::trigger_pic(bool send_mavlink_msg)
         // forward to all components
         GCS_MAVLINK::send_to_components(&msg);
     }
+    return ret;
 }
 
 /// de-activate the trigger after some delay, but without using a delay() function
@@ -253,8 +262,7 @@ bool AP_Camera::control(float session, float zoom_pos, float zoom_step, float fo
     
     // take picture
     if (is_equal(shooting_cmd,1.0f)) {
-        trigger_pic(false);
-        ret = true;
+        ret = trigger_pic(false);
     }
 
     if(is_equal(session, 1.0f)) {
