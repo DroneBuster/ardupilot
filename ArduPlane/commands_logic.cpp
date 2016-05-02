@@ -930,8 +930,11 @@ void Plane::do_digicam_control(const AP_Mission::Mission_Command& cmd)
 void Plane::do_take_picture()
 {
 #if CAMERA == ENABLED
-    camera.trigger_pic(true);
-    log_picture();
+    if(camera.trigger_pic(true)) {
+        log_picture();
+    } else {
+        gcs_send_text(MAV_SEVERITY_INFO, "Failed to take picture");
+    }
 #endif
 }
 
