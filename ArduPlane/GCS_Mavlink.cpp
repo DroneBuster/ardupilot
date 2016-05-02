@@ -1937,8 +1937,8 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
     //deprecated. Use MAV_CMD_DO_DIGICAM_CONTROL
     case MAVLINK_MSG_ID_DIGICAM_CONTROL:
     {
-        plane.camera.control_msg(msg);
-        plane.log_picture();
+        //plane.camera.control_msg(msg);
+        //plane.log_picture();
         break;
     }
 #endif // CAMERA == ENABLED
