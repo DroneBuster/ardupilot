@@ -86,12 +86,7 @@ private:
     bool            relay_pic();        // basic relay activation
     bool            seagull_pic();       // Seagull UAV #MAP trigger
     void            feedback_pin_timer();
-    void            setup_feedback_callback(void);
     void            set_camera_power(bool state); //true - camera on, false - camera off
-#if CONFIG_HAL_BOARD == HAL_BOARD_PX4
-    static void     capture_callback(void *context, uint32_t chan_index,
-                                     hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow);
-#endif
     
     AP_Float        _trigg_dist;        // distance between trigger points (meters)
     AP_Int16        _min_interval;      // Minimum time between shots required by camera

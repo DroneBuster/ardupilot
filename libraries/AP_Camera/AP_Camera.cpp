@@ -163,7 +163,6 @@ AP_Camera::trigger_pic(bool send_mavlink_msg)
         hal.scheduler->register_timer_process(FUNCTOR_BIND_MEMBER(&AP_Camera::feedback_pin_timer, void));
     }
     bool ret = false;
-    setup_feedback_callback();
 
     _image_index++;
     switch (_trigger_type)
