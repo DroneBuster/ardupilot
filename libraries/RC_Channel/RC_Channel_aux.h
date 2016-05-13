@@ -91,6 +91,9 @@ public:
         k_rcin14                = 64,
         k_rcin15                = 65,
         k_rcin16                = 66,
+        k_ignition_control      = 67,            ///< ignition control
+        k_ot_parachute_release  = 68,            ///< parachute release servo
+        k_gimbal_retract        = 69,            ///< gimbal retract servo
         k_nr_aux_servo_functions         ///< This must be the last enum value (only add new values _before_ this one)
     } Aux_servo_function_t;
 
