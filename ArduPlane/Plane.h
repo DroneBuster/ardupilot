@@ -52,6 +52,7 @@
 #include <AP_Airspeed/AP_Airspeed.h>
 #include <AP_Terrain/AP_Terrain.h>
 #include <AP_RPM/AP_RPM.h>
+#include <AP_OT_Parachute/AP_OT_Parachute.h>
 
 #include <APM_OBC/APM_OBC.h>
 #include <APM_Control/APM_Control.h>
@@ -599,6 +600,8 @@ private:
     AP_Parachute parachute {relay};
 #endif
 
+    AP_OT_Parachute ot_parachute;
+
     // terrain handling
 #if AP_TERRAIN_AVAILABLE
     AP_Terrain terrain {ahrs, mission, rally};
@@ -1067,6 +1070,7 @@ private:
     void parachute_release();
     bool parachute_manual_release();
     void accel_cal_update(void);
+    void parachute_update();
 
 public:
     void mavlink_delay_cb();

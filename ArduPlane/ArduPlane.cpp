@@ -85,6 +85,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(update_is_flying_5Hz,    5,    100),
     SCHED_TASK(dataflash_periodic,     50,    400),
     SCHED_TASK(adsb_update,             1,    400),
+    SCHED_TASK(parachute_update,       50,    500)
 };
 
 void Plane::setup() 
@@ -1013,5 +1014,10 @@ void Plane::update_optical_flow(void)
     }
 }
 #endif
+
+void Plane::parachute_update()
+{
+    ot_parachute.update(relative_altitude());
+}
 
 AP_HAL_MAIN_CALLBACKS(&plane);
