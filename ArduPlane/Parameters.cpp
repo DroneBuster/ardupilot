@@ -1121,6 +1121,10 @@ const AP_Param::Info Plane::var_info[] = {
     // @User: Advanced
     GSCALAR(parachute_channel,      "CHUTE_CHAN",  0),
 #endif
+    // @Group: PARA_
+    // @Path: ../libraries/AP_OT_Parachute/AP_OT_Parachute.cpp
+    GOBJECT(ot_parachute,      "PARA_", AP_OT_Parachute),
+
 
 #if RANGEFINDER_ENABLED == ENABLED
     // @Group: RNGFND

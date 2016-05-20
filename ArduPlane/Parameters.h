@@ -340,6 +340,7 @@ public:
         k_param_pidTeThrottle, // unused
         k_param_pidNavPitchAltitude, // unused
         k_param_pidWheelSteer, // unused
+        k_param_ot_parachute, //OT_Parachute
 
         k_param_mixing_offset,
         k_param_dspoiler_rud_rate,
