@@ -7,7 +7,7 @@
 
 extern const AP_HAL::HAL& hal;
 
-const AP_Param::GroupInfo AP_OT_Parachute::var_info[] PROGMEM = {
+const AP_Param::GroupInfo AP_OT_Parachute::var_info[] = {
 
     // @Param: ENABLED
     // @DisplayName: Parachute release enabled or disabled
@@ -59,7 +59,7 @@ void AP_OT_Parachute::release(uint16_t delay, uint8_t tries, uint16_t time)
     _release_delay = delay;
     _release_tries = tries;
     _release_toggle_time = time;
-    _release_time = hal.scheduler->millis();
+    _release_time = AP_HAL::millis();
     _to_release = true;
 }
 
@@ -68,7 +68,7 @@ void AP_OT_Parachute::release(uint16_t delay)
     _release_delay = delay;
     _release_tries = 0;
     _release_toggle_time = 0;
-    _release_time = hal.scheduler->millis();
+    _release_time = AP_HAL::millis();
     _to_release = true;
 }
 
@@ -172,7 +172,7 @@ void AP_OT_Parachute::update(float altitude)
 {
     if (!_enabled) return;
 
-    uint32_t time = hal.scheduler->millis();
+    uint32_t time = AP_HAL::millis();
 
     if (!_released && !_to_release && _enabled_FS)
     {
