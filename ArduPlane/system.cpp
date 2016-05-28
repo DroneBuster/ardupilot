@@ -238,6 +238,10 @@ void Plane::init_ardupilot()
     // don't initialise rc output until after quadplane is setup as
     // that can change initial values of channels
     init_rc_out();
+
+    ot_parachute.set_ignition(IGNITION_ON);
+    ot_parachute.set_parachute_servo(SERVO_CLOSED);
+    ot_parachute.set_gimbal_pos(GIMBAL_UP);
     
     // choose the nav controller
     set_nav_controller();
