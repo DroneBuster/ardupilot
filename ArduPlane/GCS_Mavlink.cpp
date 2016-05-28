@@ -529,6 +529,19 @@ void NOINLINE Plane::send_rpm(mavlink_channel_t chan)
 }
 
 /*
+  send OT_PARACHUTE_STATUS message
+ */
+void Plane::send_ot_parachute_status(mavlink_channel_t chan)
+{
+    mavlink_msg_ot_parachute_status_send(
+            chan,
+            ot_parachute.get_fs_status(),
+            ot_parachute.get_parachute_servo(),
+            ot_parachute.get_ignition(),
+            0);
+}
+
+/*
   send PID tuning message
  */
 void Plane::send_pid_tuning(mavlink_channel_t chan)
@@ -859,6 +872,11 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
         plane.send_rpm(chan);
         break;
 
+    case MSG_OT_PARACHUTE_STATUS:
+        CHECK_PAYLOAD_SIZE(OT_PARACHUTE_STATUS);
+        plane.send_ot_parachute_status(chan);
+        break;
+
     case MSG_MISSION_ITEM_REACHED:
         CHECK_PAYLOAD_SIZE(MISSION_ITEM_REACHED);
         mavlink_msg_mission_item_reached_send(chan, mission_item_reached_index);
@@ -1021,6 +1039,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         send_message(MSG_NAV_CONTROLLER_OUTPUT);
         send_message(MSG_FENCE_STATUS);
         send_message(MSG_POSITION_TARGET_GLOBAL_INT);
+        send_message(MSG_OT_PARACHUTE_STATUS);
     }
 
     if (plane.gcs_out_of_time) return;
