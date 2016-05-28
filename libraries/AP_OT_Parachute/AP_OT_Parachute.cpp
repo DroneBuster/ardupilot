@@ -113,6 +113,27 @@ void AP_OT_Parachute::set_gimbal_pos(int8_t state)
     _gimb_state = state;
 }
 
+uint8_t AP_OT_Parachute::get_ignition()
+{
+    if(_ignition_on)
+        return IGNITION_ON;
+    else
+        return IGNITION_OFF;
+}
+
+uint8_t AP_OT_Parachute::get_parachute_servo()
+{
+    return 1;
+}
+
+uint8_t AP_OT_Parachute::get_fs_status()
+{
+    if(_enabled_FS)
+        return FS_ON;
+    else
+        return FS_OFF;
+}
+
 /*void AP_OT_Parachute::control_msg(mavlink_message_t* msg)
 {
     //ugly hack

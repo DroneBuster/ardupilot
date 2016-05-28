@@ -81,6 +81,12 @@ public:
     ///set gimbal position
     void set_gimbal_pos(int8_t state);
 
+    uint8_t get_ignition();
+
+    uint8_t get_parachute_servo();
+
+    uint8_t get_fs_status();
+
     ///Handling of MAVLINK CMD command
    // void control_msg(mavlink_message_t* msg);
     void control_msg(int8_t p1, int8_t p2, int8_t p3, int8_t p4);
