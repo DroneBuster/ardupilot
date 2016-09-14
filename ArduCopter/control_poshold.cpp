@@ -5,7 +5,7 @@
 #if POSHOLD_ENABLED == ENABLED
 
 /*
- * control_poshold.pde - init and run calls for PosHold flight mode
+ * Init and run calls for PosHold flight mode
  *     PosHold tries to improve upon regular loiter by mixing the pilot input with the loiter controller
  */
 
@@ -145,7 +145,7 @@ void Copter::poshold_run()
         motors.set_desired_spool_state(AP_Motors::DESIRED_SPIN_WHEN_ARMED);
         wp_nav.init_loiter_target();
         attitude_control.set_throttle_out_unstabilized(0,true,g.throttle_filt);
-        pos_control.relax_alt_hold_controllers(get_throttle_pre_takeoff(channel_throttle->get_control_in())-throttle_average);
+        pos_control.relax_alt_hold_controllers(0.0f);
         return;
     }
 
@@ -165,7 +165,7 @@ void Copter::poshold_run()
         takeoff_get_climb_rates(target_climb_rate, takeoff_climb_rate);
 
         // check for take-off
-        if (ap.land_complete && (takeoff_state.running || channel_throttle->get_control_in() > get_takeoff_trigger_throttle())) {
+        if (ap.land_complete && (takeoff_state.running || target_climb_rate > 0.0f)) {
             if (!takeoff_state.running) {
                 takeoff_timer_start(constrain_float(g.pilot_takeoff_alt,0.0f,1000.0f));
             }
@@ -184,16 +184,18 @@ void Copter::poshold_run()
 
     // if landed initialise loiter targets, set throttle to zero and exit
     if (ap.land_complete) {
-        // if throttle zero reset attitude and exit immediately
-        if (ap.throttle_zero) {
+        // set motors to spin-when-armed if throttle below deadzone, otherwise full range (but motors will only spin at min throttle)
+        if (target_climb_rate < 0.0f) {
             motors.set_desired_spool_state(AP_Motors::DESIRED_SPIN_WHEN_ARMED);
-        }else{
+        } else {
             motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
         }
         wp_nav.init_loiter_target();
-        // move throttle to between minimum and non-takeoff-throttle to keep us on the ground
-        attitude_control.set_throttle_out(get_throttle_pre_takeoff(channel_throttle->get_control_in()),false,g.throttle_filt);
-        pos_control.relax_alt_hold_controllers(get_throttle_pre_takeoff(channel_throttle->get_control_in())-throttle_average);
+        attitude_control.reset_rate_controller_I_terms();
+        attitude_control.set_yaw_target_to_current_heading();
+        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(0, 0, 0, get_smoothing_gain());
+        pos_control.relax_alt_hold_controllers(0.0f);   // forces throttle output to go to zero
+        pos_control.update_z_controller();
         return;
     }else{
         // convert pilot input to lean angles
@@ -517,7 +519,7 @@ void Copter::poshold_run()
         poshold.pitch = constrain_int16(poshold.pitch, -aparm.angle_max, aparm.angle_max);
 
         // update attitude controller targets
-        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(poshold.roll, poshold.pitch, target_yaw_rate);
+        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(poshold.roll, poshold.pitch, target_yaw_rate, get_smoothing_gain());
 
         // adjust climb rate using rangefinder
         if (rangefinder_alt_ok()) {

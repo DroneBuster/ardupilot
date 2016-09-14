@@ -3,7 +3,7 @@
 #include "Copter.h"
 
 /*
- * control_drift.pde - init and run calls for drift flight mode
+ * Init and run calls for drift flight mode
  */
 
 #ifndef DRIFT_SPEEDGAIN
@@ -55,6 +55,11 @@ void Copter::drift_run()
         return;
     }
 
+    // clear landing flag above zero throttle
+    if (!ap.throttle_zero) {
+        set_land_complete(false);
+    }
+
     // convert pilot input to lean angles
     get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, aparm.angle_max);
 
@@ -82,7 +87,7 @@ void Copter::drift_run()
 
     // Roll velocity is feed into roll acceleration to minimize slip
     target_roll = roll_vel_error * -DRIFT_SPEEDGAIN;
-    target_roll = constrain_int16(target_roll, -4500, 4500);
+    target_roll = constrain_float(target_roll, -4500.0f, 4500.0f);
 
     // If we let go of sticks, bring us to a stop
     if(is_zero(target_pitch)){
@@ -98,7 +103,7 @@ void Copter::drift_run()
     motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
 
     // call attitude controller
-    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
+    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
 
     // output pilot's throttle with angle boost
     attitude_control.set_throttle_out(get_throttle_assist(vel.z, pilot_throttle_scaled), true, g.throttle_filt);

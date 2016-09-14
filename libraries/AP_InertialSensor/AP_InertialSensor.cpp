@@ -11,6 +11,7 @@
 #include <AP_Vehicle/AP_Vehicle.h>
 
 #include "AP_InertialSensor.h"
+#include "AP_InertialSensor_BMI160.h"
 #include "AP_InertialSensor_Backend.h"
 #include "AP_InertialSensor_HIL.h"
 #include "AP_InertialSensor_L3G4200D.h"
@@ -22,13 +23,9 @@
 #include "AP_InertialSensor_SITL.h"
 #include "AP_InertialSensor_qflight.h"
 
-/*
-  enable TIMING_DEBUG to track down scheduling issues with the main
-  loop. Output is on the debug console
- */
-#define TIMING_DEBUG 0
-
-#if TIMING_DEBUG
+/* Define INS_TIMING_DEBUG to track down scheduling issues with the main loop.
+ * Output is on the debug console. */
+#ifdef INS_TIMING_DEBUG
 #include <stdio.h>
 #define timing_printf(fmt, args...)      do { printf("[timing] " fmt, ##args); } while(0)
 #else
@@ -42,7 +39,7 @@ extern const AP_HAL::HAL& hal;
 #define DEFAULT_ACCEL_FILTER 20
 #define DEFAULT_STILL_THRESH 2.5f
 #elif APM_BUILD_TYPE(APM_BUILD_APMrover2)
-#define DEFAULT_GYRO_FILTER  10
+#define DEFAULT_GYRO_FILTER  4
 #define DEFAULT_ACCEL_FILTER 10
 #define DEFAULT_STILL_THRESH 0.1f
 #else
@@ -52,6 +49,8 @@ extern const AP_HAL::HAL& hal;
 #endif
 
 #define SAMPLE_UNIT 1
+
+#define GYRO_INIT_MAX_DIFF_DPS 0.1f
 
 // Class level parameters
 const AP_Param::GroupInfo AP_InertialSensor::var_info[] = {
@@ -568,6 +567,14 @@ AP_InertialSensor::detect_backends(void)
     } else {
         hal.console->printf("MPU9250: External IMU not detected\n");
     }
+#elif HAL_INS_DEFAULT == HAL_INS_AERO
+    auto *backend = AP_InertialSensor_BMI160::probe(*this,
+                                                    hal.spi->get_device("bmi160"));
+    if (backend) {
+        _add_backend(backend);
+    } else {
+        hal.console->printf("aero: onboard IMU not detected\n");
+    }
 #else
     #error Unrecognised HAL_INS_TYPE setting
 #endif
@@ -803,7 +810,7 @@ AP_InertialSensor::_init_gyro()
     for (uint8_t k=0; k<num_gyros; k++) {
         _gyro_offset[k].set(Vector3f());
         new_gyro_offset[k].zero();
-        best_diff[k] = 0;
+        best_diff[k] = -1.f;
         last_average[k].zero();
         converged[k] = false;
     }
@@ -859,10 +866,10 @@ AP_InertialSensor::_init_gyro()
         }
 
         for (uint8_t k=0; k<num_gyros; k++) {
-            if (j == 0) {
+            if (best_diff[k] < 0) {
                 best_diff[k] = diff_norm[k];
                 best_avg[k] = gyro_avg[k];
-            } else if (gyro_diff[k].length() < ToRad(0.1f)) {
+            } else if (gyro_diff[k].length() < ToRad(GYRO_INIT_MAX_DIFF_DPS)) {
                 // we want the average to be within 0.1 bit, which is 0.04 degrees/s
                 last_average[k] = (gyro_avg[k] * 0.5f) + (last_average[k] * 0.5f);
                 if (!converged[k] || last_average[k].length() < new_gyro_offset[k].length()) {
@@ -885,8 +892,10 @@ AP_InertialSensor::_init_gyro()
     hal.console->println();
     for (uint8_t k=0; k<num_gyros; k++) {
         if (!converged[k]) {
-            hal.console->printf("gyro[%u] did not converge: diff=%f dps\n",
-                                  (unsigned)k, (double)ToDeg(best_diff[k]));
+            hal.console->printf("gyro[%u] did not converge: diff=%f dps (expected < %f)\n",
+                                (unsigned)k,
+                                (double)ToDeg(best_diff[k]),
+                                (double)GYRO_INIT_MAX_DIFF_DPS);
             _gyro_offset[k] = best_avg[k];
             // flag calibration as failed for this gyro
             _gyro_cal_ok[k] = false;
@@ -1076,17 +1085,21 @@ check_sample:
         // accel and gyro. This normally completes immediately.
         bool gyro_available = false;
         bool accel_available = false;
-        while (!gyro_available || !accel_available) {
+        while (true) {
             for (uint8_t i=0; i<_backend_count; i++) {
                 _backends[i]->accumulate();
             }
+
             for (uint8_t i=0; i<INS_MAX_INSTANCES; i++) {
                 gyro_available |= _new_gyro_data[i];
                 accel_available |= _new_accel_data[i];
             }
-            if (!gyro_available || !accel_available) {
-                hal.scheduler->delay_microseconds(100);
+
+            if (gyro_available && accel_available) {
+                break;
             }
+
+            hal.scheduler->delay_microseconds(100);
         }
     }
 

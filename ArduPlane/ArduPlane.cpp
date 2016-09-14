@@ -50,7 +50,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(read_airspeed,          10,    100),
     SCHED_TASK(update_alt,             10,    200),
     SCHED_TASK(adjust_altitude_target, 10,    200),
-    SCHED_TASK(obc_fs_check,           10,    100),
+    SCHED_TASK(afs_fs_check,           10,    100),
     SCHED_TASK(gcs_update,             50,    500),
     SCHED_TASK(gcs_data_stream_send,   50,    500),
     SCHED_TASK(update_events,          50,    150),
@@ -60,6 +60,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(barometer_accumulate,   50,    150),
     SCHED_TASK(update_notify,          50,    300),
     SCHED_TASK(read_rangefinder,       50,    100),
+    SCHED_TASK(ice_update,             10,    100),
     SCHED_TASK(compass_cal_update,     50,    50),
     SCHED_TASK(accel_cal_update,       10,    50),
 #if OPTFLOW == ENABLED
@@ -78,14 +79,12 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(update_logging1,        10,    300),
     SCHED_TASK(update_logging2,        10,    300),
     SCHED_TASK(parachute_check,        10,    200),
-#if FRSKY_TELEM_ENABLED == ENABLED
-    SCHED_TASK(frsky_telemetry_send,    5,    100),
-#endif
     SCHED_TASK(terrain_update,         10,    200),
     SCHED_TASK(update_is_flying_5Hz,    5,    100),
     SCHED_TASK(dataflash_periodic,     50,    400),
-    SCHED_TASK(adsb_update,             1,    400),
-    SCHED_TASK(parachute_update,       50,    500)
+    SCHED_TASK(parachute_update,       50,    500),
+    SCHED_TASK(avoidance_adsb_update,  10,    100),
+    SCHED_TASK(button_update,           5,    100),
 };
 
 void Plane::setup() 
@@ -165,7 +164,7 @@ void Plane::ahrs_update()
     }
 
     // calculate a scaled roll limit based on current pitch
-    roll_limit_cd = g.roll_limit_cd * cosf(ahrs.pitch);
+    roll_limit_cd = aparm.roll_limit_cd * cosf(ahrs.pitch);
     pitch_limit_min_cd = aparm.pitch_limit_min_cd * fabsf(cosf(ahrs.roll));
 
     // updated the summed gyro used for ground steering and
@@ -285,14 +284,12 @@ void Plane::update_logging2(void)
 
 
 /*
-  check for OBC failsafe check
+  check for AFS failsafe check
  */
-void Plane::obc_fs_check(void)
+void Plane::afs_fs_check(void)
 {
-#if OBC_FAILSAFE == ENABLED
-    // perform OBC failsafe checks
-    obc.check(OBC_MODE(control_mode), failsafe.last_heartbeat_ms, geofence_breached(), failsafe.AFS_last_valid_rc_ms);
-#endif
+    // perform AFS failsafe checks
+    afs.check(failsafe.last_heartbeat_ms, geofence_breached(), failsafe.AFS_last_valid_rc_ms);
 }
 
 
@@ -321,6 +318,8 @@ void Plane::one_second_loop()
 
     // make it possible to change orientation at runtime
     ahrs.set_orientation();
+
+    adsb.set_stall_speed_cm(aparm.airspeed_min);
 
     // sync MAVLink system ID
     mavlink_system.sysid = g.sysid_this_mav;
@@ -410,7 +409,7 @@ void Plane::airspeed_ratio_update(void)
         return;
     }
     const Vector3f &vg = gps.velocity();
-    airspeed.update_calibration(vg);
+    airspeed.update_calibration(vg, aparm.airspeed_max);
     gcs_send_airspeed_calibration(vg);
 }
 
@@ -486,12 +485,15 @@ void Plane::update_GPS_10Hz(void)
         if (!hal.util->get_soft_armed()) {
             update_home();
 
-            // zero out any baro drift
-            barometer.set_baro_drift_altitude(0);
+            // reset the landing altitude correction
+            auto_state.land_alt_offset = 0;
         }
 
         // update wind estimate
         ahrs.estimate_wind();
+    } else if (gps.status() < AP_GPS::GPS_OK_FIX_3D && ground_start_count != 0) {
+        // lost 3D fix, start again
+        ground_start_count = 5;
     }
 
     calc_gndspeed_undershoot();
@@ -506,7 +508,7 @@ void Plane::handle_auto_mode(void)
 
     if (mission.state() != AP_Mission::MISSION_RUNNING) {
         // this should never be reached
-        set_mode(RTL);
+        set_mode(RTL, MODE_REASON_MISSION_END);
         GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_INFO, "Aircraft in auto without a running mission");
         return;
     }
@@ -578,6 +580,7 @@ void Plane::update_flight_mode(void)
         handle_auto_mode();
         break;
 
+    case AVOID_ADSB:
     case GUIDED:
         if (auto_state.vtol_loiter && quadplane.available()) {
             quadplane.guided_update();
@@ -738,13 +741,14 @@ void Plane::update_flight_mode(void)
     case QLAND:
     case QRTL: {
         // set nav_roll and nav_pitch using sticks
-        nav_roll_cd  = channel_roll->norm_input() * roll_limit_cd;
-        nav_roll_cd = constrain_int32(nav_roll_cd, -roll_limit_cd, roll_limit_cd);
+        int16_t roll_limit = MIN(roll_limit_cd, quadplane.aparm.angle_max);
+        nav_roll_cd  = channel_roll->norm_input() * roll_limit;
+        nav_roll_cd = constrain_int32(nav_roll_cd, -roll_limit, roll_limit);
         float pitch_input = channel_pitch->norm_input();
         if (pitch_input > 0) {
-            nav_pitch_cd = pitch_input * aparm.pitch_limit_max_cd;
+            nav_pitch_cd = pitch_input * MIN(aparm.pitch_limit_max_cd, quadplane.aparm.angle_max);
         } else {
-            nav_pitch_cd = -(pitch_input * pitch_limit_min_cd);
+            nav_pitch_cd = pitch_input * MIN(-pitch_limit_min_cd, quadplane.aparm.angle_max);
         }
         nav_pitch_cd = constrain_int32(nav_pitch_cd, pitch_limit_min_cd, aparm.pitch_limit_max_cd.get());
         break;
@@ -773,7 +777,7 @@ void Plane::update_navigation()
     case RTL:
         if (quadplane.available() && quadplane.rtl_mode == 1 &&
             nav_controller->reached_loiter_target()) {
-            set_mode(QRTL);
+            set_mode(QRTL, MODE_REASON_UNKNOWN);
             break;
         } else if (g.rtl_autoland == 1 &&
             !auto_state.checked_for_autoland &&
@@ -802,6 +806,7 @@ void Plane::update_navigation()
         // fall through to LOITER
 
     case LOITER:
+    case AVOID_ADSB:
     case GUIDED:
         update_loiter(radius);
         break;

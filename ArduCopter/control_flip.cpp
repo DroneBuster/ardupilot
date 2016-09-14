@@ -3,7 +3,7 @@
 #include "Copter.h"
 
 /*
- * control_flip.pde - init and run calls for flip flight mode
+ * Init and run calls for flip flight mode
  *      original implementation in 2010 by Jose Julio
  *      Adapted and updated for AC2 in 2011 by Jason Short
  *
@@ -177,7 +177,7 @@ void Copter::flip_run()
 
     case Flip_Recover:
         // use originally captured earth-frame angle targets to recover
-        attitude_control.input_euler_angle_roll_pitch_yaw(flip_orig_attitude.x, flip_orig_attitude.y, flip_orig_attitude.z, false);
+        attitude_control.input_euler_angle_roll_pitch_yaw(flip_orig_attitude.x, flip_orig_attitude.y, flip_orig_attitude.z, false, get_smoothing_gain());
 
         // increase throttle to gain any lost altitude
         throttle_out += FLIP_THR_INC;

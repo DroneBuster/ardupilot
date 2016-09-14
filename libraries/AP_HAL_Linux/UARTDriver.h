@@ -1,10 +1,13 @@
 #pragma once
 
-#include "AP_HAL_Linux.h"
+#include <AP_HAL/utility/OwnPtr.h>
 
+#include "AP_HAL_Linux.h"
 #include "SerialDevice.h"
 
-class Linux::UARTDriver : public AP_HAL::UARTDriver {
+namespace Linux {
+
+class UARTDriver : public AP_HAL::UARTDriver {
 public:
     UARTDriver(bool default_console);
 
@@ -22,9 +25,9 @@ public:
     bool tx_pending();
 
     /* Linux implementations of Stream virtual methods */
-    int16_t available();
-    int16_t txspace();
-    int16_t read();
+    uint32_t available() override;
+    uint32_t txspace() override;
+    int16_t read() override;
 
     /* Linux implementations of Print virtual methods */
     size_t write(uint8_t c);
@@ -35,39 +38,32 @@ public:
     bool _write_pending_bytes(void);
     virtual void _timer_tick(void);
 
-    enum flow_control get_flow_control(void) { return _flow_control; }
+    virtual enum flow_control get_flow_control(void) override
+    {
+        return _device->get_flow_control();
+    }
+
+    virtual void set_flow_control(enum flow_control flow_control_setting) override
+   {
+       _device->set_flow_control(flow_control_setting);
+   }
 
 private:
-    SerialDevice *_device = nullptr;
+    AP_HAL::OwnPtr<SerialDevice> _device;
     bool _nonblocking_writes;
     bool _console;
     volatile bool _in_timer;
     uint16_t _base_port;
     char *_ip;
     char *_flag;
-    bool _connected; // true if a client has connected         
+    bool _connected; // true if a client has connected
     bool _packetise; // true if writes should try to be on mavlink boundaries
-    enum flow_control _flow_control;
 
     void _allocate_buffers(uint16_t rxS, uint16_t txS);
     void _deallocate_buffers();
-    void _udp_start_connection(void);
-    void _tcp_start_connection(void);
-    bool _serial_start_connection(void);
-    bool _qflight_start_connection(void);
 
-    enum device_type {
-        DEVICE_TCP,
-        DEVICE_UDP,
-        DEVICE_SERIAL,
-#if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_QFLIGHT
-        DEVICE_QFLIGHT,
-#endif
-        DEVICE_UNKNOWN
-    };
-
-    enum device_type _parseDevicePath(const char *arg);
-    uint64_t _last_write_time;    
+    AP_HAL::OwnPtr<SerialDevice> _parseDevicePath(const char *arg);
+    uint64_t _last_write_time;
 
 protected:
     const char *device_path;
@@ -91,3 +87,5 @@ protected:
     virtual int _read_fd(uint8_t *buf, uint16_t n);
 
 };
+
+}

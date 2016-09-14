@@ -40,6 +40,10 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
         // reset loiter start time. New command is a new loiter
         loiter.start_time_ms = 0;
 
+        AP_Mission::Mission_Command next_nav_cmd;
+        const uint16_t next_index = mission.get_current_nav_index() + 1;
+        auto_state.wp_is_land_approach = mission.get_next_nav_cmd(next_index, next_nav_cmd) && (next_nav_cmd.id == MAV_CMD_NAV_LAND);
+
         gcs_send_text_fmt(MAV_SEVERITY_INFO, "Executing nav command ID #%i",cmd.id);
     } else {
         gcs_send_text_fmt(MAV_SEVERITY_INFO, "Executing command ID #%i",cmd.id);
@@ -77,7 +81,7 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
         break;
 
     case MAV_CMD_NAV_RETURN_TO_LAUNCH:
-        set_mode(RTL);
+        set_mode(RTL, MODE_REASON_UNKNOWN);
         break;
 
     case MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT:
@@ -221,6 +225,12 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
     case MAV_CMD_DO_VTOL_TRANSITION:
         plane.quadplane.handle_do_vtol_transition((enum MAV_VTOL_STATE)cmd.content.do_vtol_transition.target_state);
         break;
+
+    case MAV_CMD_DO_ENGINE_CONTROL:
+        plane.g2.ice_control.engine_control(cmd.content.do_engine_control.start_control,
+                                            cmd.content.do_engine_control.cold_start,
+                                            cmd.content.do_engine_control.height_delay_cm*0.01f);
+        break;
     }
 
     return true;
@@ -306,6 +316,8 @@ bool Plane::verify_command(const AP_Mission::Mission_Command& cmd)        // Ret
     case MAV_CMD_DO_LAND_START:
     case MAV_CMD_DO_FENCE_ENABLE:
     case MAV_CMD_DO_AUTOTUNE_ENABLE:
+    case MAV_CMD_DO_VTOL_TRANSITION:
+    case MAV_CMD_DO_ENGINE_CONTROL:
         return true;
 
     default:
@@ -313,7 +325,7 @@ bool Plane::verify_command(const AP_Mission::Mission_Command& cmd)        // Ret
         if (AP_Mission::is_nav_cmd(cmd)) {
             gcs_send_text(MAV_SEVERITY_WARNING,"Verify nav. Invalid or no current nav cmd");
         }else{
-        gcs_send_text(MAV_SEVERITY_WARNING,"Verify conditon. Invalid or no current condition cmd");
+        gcs_send_text(MAV_SEVERITY_WARNING,"Verify condition. Invalid or no current condition cmd");
     }
         // return true so that we do not get stuck at this command
         return true;
@@ -536,15 +548,7 @@ bool Plane::verify_takeoff()
         auto_state.takeoff_complete = true;
         next_WP_loc = prev_WP_loc = current_loc;
 
-#if GEOFENCE_ENABLED == ENABLED
-        if (g.fence_autoenable > 0) {
-            if (! geofence_set_enabled(true, AUTO_TOGGLED)) {
-                gcs_send_text(MAV_SEVERITY_NOTICE, "Enable fence failed (cannot autoenable");
-            } else {
-                gcs_send_text(MAV_SEVERITY_INFO, "Fence enabled (autoenabled)");
-            }
-        }
-#endif
+        plane.complete_auto_takeoff();
 
         // don't cross-track on completion of takeoff, as otherwise we
         // can end up doing too sharp a turn
@@ -977,7 +981,7 @@ bool Plane::verify_command_callback(const AP_Mission::Mission_Command& cmd)
 void Plane::exit_mission_callback()
 {
     if (control_mode == AUTO) {
-        set_mode(RTL);
+        set_mode(RTL, MODE_REASON_MISSION_END);
         gcs_send_text_fmt(MAV_SEVERITY_INFO, "Mission complete, changing mode to RTL");
     }
 }

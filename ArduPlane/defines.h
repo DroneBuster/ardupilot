@@ -6,8 +6,6 @@
 
 #define TRUE 1
 #define FALSE 0
-#define ToRad(x) radians(x)	// *pi/180
-#define ToDeg(x) degrees(x)	// *180/pi
 
 #define DEBUG 0
 #define LOITER_RANGE 60 // for calculating power outside of loiter radius
@@ -60,6 +58,7 @@ enum FlightMode {
     AUTO          = 10,
     RTL           = 11,
     LOITER        = 12,
+    AVOID_ADSB    = 14,
     GUIDED        = 15,
     INITIALISING  = 16,
     QSTABILIZE    = 17,
@@ -67,6 +66,21 @@ enum FlightMode {
     QLOITER       = 19,
     QLAND         = 20,
     QRTL          = 21
+};
+
+enum mode_reason_t {
+    MODE_REASON_UNKNOWN=0,
+    MODE_REASON_TX_COMMAND,
+    MODE_REASON_GCS_COMMAND,
+    MODE_REASON_RADIO_FAILSAFE,
+    MODE_REASON_BATTERY_FAILSAFE,
+    MODE_REASON_GCS_FAILSAFE,
+    MODE_REASON_EKF_FAILSAFE,
+    MODE_REASON_GPS_GLITCH,
+    MODE_REASON_MISSION_END,
+    MODE_REASON_FENCE_BREACH,
+    MODE_REASON_AVOIDANCE,
+    MODE_REASON_AVOIDANCE_RECOVERY,
 };
 
 // type of stick mixing enabled

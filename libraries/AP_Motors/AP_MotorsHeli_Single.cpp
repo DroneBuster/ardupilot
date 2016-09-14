@@ -261,7 +261,7 @@ void AP_MotorsHeli_Single::calculate_armed_scalars()
     _main_rotor.set_runup_time(_rsc_runup_time);
     _main_rotor.set_critical_speed(_rsc_critical/1000.0f);
     _main_rotor.set_idle_output(_rsc_idle_output/1000.0f);
-    _main_rotor.set_power_output_range(_rsc_power_low/1000.0f, _rsc_power_high/1000.0f);
+    _main_rotor.set_power_output_range(_rsc_power_low/1000.0f, _rsc_power_high/1000.0f, _rsc_power_negc/1000.0f, (uint16_t)_rsc_slewrate.get());
 }
 
 
@@ -423,7 +423,8 @@ void AP_MotorsHeli_Single::move_actuators(float roll_out, float pitch_out, float
         if ((_main_rotor.get_control_output() > _main_rotor.get_idle_output()) && _tail_type != AP_MOTORS_HELI_SINGLE_TAILTYPE_SERVO_EXTGYRO) {
             // sanity check collective_yaw_effect
             _collective_yaw_effect = constrain_float(_collective_yaw_effect, -AP_MOTORS_HELI_SINGLE_COLYAW_RANGE, AP_MOTORS_HELI_SINGLE_COLYAW_RANGE);
-            yaw_offset = _collective_yaw_effect * fabsf(collective_out - _collective_mid_pct);
+            // the 4.5 scaling factor is to bring the values in line with previous releases
+            yaw_offset = _collective_yaw_effect * fabsf(collective_out - _collective_mid_pct) / 4.5f;
         }
     } else {
         yaw_offset = 0.0f;
@@ -432,7 +433,13 @@ void AP_MotorsHeli_Single::move_actuators(float roll_out, float pitch_out, float
     // feed power estimate into main rotor controller
     // ToDo: include tail rotor power?
     // ToDo: add main rotor cyclic power?
-    _main_rotor.set_motor_load(fabsf(collective_out - _collective_mid_pct));
+    if (collective_out > _collective_mid_pct) {
+        // +ve motor load for +ve collective
+        _main_rotor.set_motor_load((collective_out - _collective_mid_pct) / (1.0f - _collective_mid_pct));
+    } else {
+        // -ve motor load for -ve collective
+        _main_rotor.set_motor_load((collective_out - _collective_mid_pct) / _collective_mid_pct);
+    }
 
     // swashplate servos
     float collective_scalar = ((float)(_collective_max-_collective_min))/1000.0f;

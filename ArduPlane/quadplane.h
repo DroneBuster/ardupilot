@@ -6,6 +6,8 @@
 #include <AP_InertialNav/AP_InertialNav.h>
 #include <AC_AttitudeControl/AC_PosControl.h>
 #include <AC_WPNav/AC_WPNav.h>
+#include <AC_Fence/AC_Fence.h>
+#include <AC_Avoidance/AC_Avoid.h>
 
 /*
   frame types for quadplane build. Most case be set with
@@ -33,6 +35,8 @@ class QuadPlane
 public:
     friend class Plane;
     friend class AP_Tuning_Plane;
+    friend class GCS_MAVLINK_Plane;
+    friend class AP_AdvancedFailsafe_Plane;
     
     QuadPlane(AP_AHRS_NavEKF &_ahrs);
 
@@ -133,7 +137,10 @@ private:
 
     // vertical acceleration the pilot may request
     AP_Int16 pilot_accel_z;
-    
+
+    // check for quadplane assistance needed
+    bool assistance_needed(float aspeed);
+
     // update transition handling
     void update_transition(void);
 
@@ -185,6 +192,8 @@ private:
 
     void guided_start(void);
     void guided_update(void);
+
+    void check_throttle_suppression(void);
     
     AP_Int16 transition_time_ms;
 
@@ -193,12 +202,14 @@ private:
     // min and max PWM for throttle
     AP_Int16 thr_min_pwm;
     AP_Int16 thr_max_pwm;
-    AP_Int16 throttle_mid;
-    AP_Int16 throttle_min;
 
     // speed below which quad assistance is given
     AP_Float assist_speed;
 
+    // angular error at which quad assistance is given
+    AP_Int8 assist_angle;
+    uint32_t angle_error_start_ms;
+    
     // maximum yaw rate in degrees/second
     AP_Float yaw_rate_max;
 
@@ -224,6 +235,9 @@ private:
     // control ESC throttle calibration
     AP_Int8 esc_calibration;
     void run_esc_calibration(void);
+
+    // ICEngine control on landing
+    AP_Int8 land_icengine_cut;
     
     struct {
         AP_Float gain;
@@ -259,13 +273,20 @@ private:
     } transition_state;
 
     // true when waiting for pilot throttle
-    bool throttle_wait;
+    bool throttle_wait:1;
 
     // true when quad is assisting a fixed wing mode
-    bool assisted_flight;
+    bool assisted_flight:1;
 
-    // time when motors reached lower limit
-    uint32_t motors_lower_limit_start_ms;
+    // true when in angle assist
+    bool in_angle_assist:1;
+
+    struct {
+        // time when motors reached lower limit
+        uint32_t lower_limit_start_ms;
+        uint32_t land_start_ms;
+        float vpos_start_m;
+    } landing_detect;
 
     // time we last set the loiter target
     uint32_t last_loiter_ms;
@@ -317,6 +338,9 @@ private:
         bool motors_active:1;
     } tilt;
 
+    // time when motors were last active
+    uint32_t last_motors_active_ms;
+    
     void tiltrotor_slew(float tilt);
     void tiltrotor_update(void);
     void tilt_compensate(float *thrust, uint8_t num_motors);

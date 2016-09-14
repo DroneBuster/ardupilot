@@ -53,7 +53,7 @@ extern const AP_HAL::HAL& hal;
 
 #define SCHED_THREAD(name_, UPPER_NAME_)                        \
     {                                                           \
-        .name = "sched-" #name_,                                \
+        .name = "ap-" #name_,                                   \
         .thread = &_##name_##_thread,                           \
         .policy = SCHED_FIFO,                                   \
         .prio = APM_LINUX_##UPPER_NAME_##_PRIORITY,             \
@@ -185,7 +185,7 @@ void Scheduler::register_timer_process(AP_HAL::MemberProc proc)
 bool Scheduler::register_timer_process(AP_HAL::MemberProc proc,
                                        uint8_t freq_div)
 {
-#if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BEBOP
+#if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BEBOP || CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DISCO
     if (freq_div > 1) {
         return _register_timesliced_proc(proc, freq_div);
     }

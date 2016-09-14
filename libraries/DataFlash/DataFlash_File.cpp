@@ -32,7 +32,7 @@
 #include <time.h>
 #include <dirent.h>
 #include <AP_HAL/utility/RingBuffer.h>
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(__MACH__)
 #include <sys/param.h>
 #include <sys/mount.h>
 #elif !DATAFLASH_FILE_MINIMAL
@@ -861,8 +861,13 @@ uint16_t DataFlash_File::start_new_log(void)
 
     char buf[30];
     snprintf(buf, sizeof(buf), "%u\r\n", (unsigned)log_num);
-    write(fd, buf, strlen(buf));
+    const ssize_t to_write = strlen(buf);
+    const ssize_t written = write(fd, buf, to_write);
     close(fd);
+
+    if (written < to_write) {
+        return 0xFFFF;
+    }
 
     return log_num;
 }
@@ -1099,6 +1104,30 @@ void DataFlash_File::_io_timer(void)
     }
     hal.util->perf_end(_perf_write);
 }
+
+// this sensor is enabled if we should be logging at the moment
+bool DataFlash_File::logging_enabled() const
+{
+    if (hal.util->get_soft_armed() ||
+        _front.log_while_disarmed()) {
+        return true;
+    }
+    return false;
+}
+
+bool DataFlash_File::logging_failed() const
+{
+    if (_write_fd == -1 &&
+        (hal.util->get_soft_armed() ||
+         _front.log_while_disarmed())) {
+        return true;
+    }
+    if (_open_error) {
+        return true;
+    }
+    return false;
+}
+
 
 #endif // HAL_OS_POSIX_IO
 

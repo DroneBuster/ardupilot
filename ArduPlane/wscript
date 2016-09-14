@@ -5,11 +5,12 @@ def build(bld):
     vehicle = bld.path.name
     bld.ap_stlib(
         name=vehicle + '_libs',
-        vehicle=vehicle,
-        libraries=bld.ap_common_vehicle_libraries() + [
+        ap_vehicle=vehicle,
+        ap_libraries=bld.ap_common_vehicle_libraries() + [
             'APM_Control',
-            'APM_OBC',
+            'AP_AdvancedFailsafe',
             'AP_ADSB',
+            'AP_Avoidance',
             'AP_Arming',
             'AP_Camera',
             'AP_Frsky_Telem',
@@ -26,13 +27,21 @@ def build(bld):
             'AC_WPNav',
             'AC_AttitudeControl',
             'AP_Motors',
-            'AC_PID'
+            'AC_PID',
+            'AC_Fence',
+            'AC_Avoidance'
         ],
-        use='mavlink',
     )
 
     bld.ap_program(
         program_name='arduplane',
         program_groups=['bin', 'plane'],
         use=vehicle + '_libs',
+    )
+
+    bld.ap_program(
+        program_name='arduplane-tri',
+        program_groups=['bin', 'plane'],
+        use=vehicle + '_libs',
+        defines=['FRAME_CONFIG=TRI_FRAME'],
     )

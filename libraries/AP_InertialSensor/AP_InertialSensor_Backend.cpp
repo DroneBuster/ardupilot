@@ -4,6 +4,7 @@
 #include "AP_InertialSensor.h"
 #include "AP_InertialSensor_Backend.h"
 #include <DataFlash/DataFlash.h>
+#include <AP_Module/AP_Module.h>
 
 const extern AP_HAL::HAL& hal;
 
@@ -70,6 +71,9 @@ void AP_InertialSensor_Backend::_notify_new_gyro_raw_sample(uint8_t instance,
 
     dt = 1.0f / _imu._gyro_raw_sample_rates[instance];
 
+    // call gyro_sample hook if any
+    AP_Module::call_hook_gyro_sample(instance, dt, gyro);
+    
     // compute delta angle
     Vector3f delta_angle = (gyro + _imu._last_raw_gyro[instance]) * 0.5f * dt;
 
@@ -155,7 +159,8 @@ void AP_InertialSensor_Backend::_publish_accel(uint8_t instance, const Vector3f 
 
 void AP_InertialSensor_Backend::_notify_new_accel_raw_sample(uint8_t instance,
                                                              const Vector3f &accel,
-                                                             uint64_t sample_us)
+                                                             uint64_t sample_us,
+                                                             bool fsync_set)
 {
     float dt;
 
@@ -165,6 +170,9 @@ void AP_InertialSensor_Backend::_notify_new_accel_raw_sample(uint8_t instance,
 
     dt = 1.0f / _imu._accel_raw_sample_rates[instance];
 
+    // call gyro_sample hook if any
+    AP_Module::call_hook_accel_sample(instance, dt, accel, fsync_set);
+    
     _imu.calc_vibration_and_clipping(instance, accel, dt);
 
     // delta velocity
@@ -226,6 +234,11 @@ uint16_t AP_InertialSensor_Backend::get_sample_rate_hz(void) const
 void AP_InertialSensor_Backend::_publish_temperature(uint8_t instance, float temperature)
 {
     _imu._temperature[instance] = temperature;
+
+    /* give the temperature to the control loop in order to keep it constant*/
+    if (instance == 0) {
+        hal.util->set_imu_temp(temperature);
+    }
 }
 
 /*

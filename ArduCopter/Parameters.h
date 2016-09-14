@@ -54,6 +54,7 @@ public:
         k_param_ins,                            // libraries/AP_InertialSensor variables
         k_param_NavEKF2_old, // deprecated
         k_param_NavEKF2,
+        k_param_g2, // 2nd block of parameters
 
         // simulation
         k_param_sitl = 10,
@@ -181,6 +182,8 @@ public:
         k_param_fs_crash_check,
         k_param_throw_motor_start,
         k_param_terrain_follow,    // 94
+        k_param_avoid,
+        k_param_avoidance_adsb,
 
         // 97: RSSI
         k_param_rssi = 97,
@@ -280,7 +283,7 @@ public:
         k_param_rc_8,
         k_param_rc_10,
         k_param_rc_11,
-        k_param_throttle_min,
+        k_param_throttle_min,           // remove
         k_param_throttle_max,           // remove
         k_param_failsafe_throttle,
         k_param_throttle_fs_action,     // remove
@@ -292,7 +295,7 @@ public:
         k_param_radio_tuning_low,
         k_param_rc_speed = 192,
         k_param_failsafe_battery_enabled,
-        k_param_throttle_mid,
+        k_param_throttle_mid,           // remove
         k_param_failsafe_gps_enabled,   // remove
         k_param_rc_9,
         k_param_rc_12,
@@ -362,6 +365,9 @@ public:
         k_param_DataFlash = 253, // 253 - Logging Group
 
         // 254,255: reserved
+
+        // the k_param_* space is 9-bits in size
+        // 511: reserved
     };
 
     AP_Int16        format_version;
@@ -414,10 +420,8 @@ public:
 
     // Throttle
     //
-    AP_Int16        throttle_min;
     AP_Int8         failsafe_throttle;
     AP_Int16        failsafe_throttle_value;
-    AP_Int16        throttle_mid;
     AP_Int16        throttle_deadzone;
 
     // Flight modes
@@ -529,6 +533,35 @@ public:
         p_alt_hold              (ALT_HOLD_P)
     {
     }
+};
+
+/*
+  2nd block of parameters, to avoid going past 256 top level keys
+ */
+class ParametersG2 {
+public:
+    ParametersG2(void);
+
+    // var_info for holding Parameter information
+    static const struct AP_Param::GroupInfo var_info[];
+
+    // altitude at which nav control can start in takeoff
+    AP_Float wp_navalt_min;
+
+    // button checking
+    AP_Button button;
+
+    // Throw mode parameters
+    AP_Int8 throw_nextmode;
+    AP_Int8 throw_type;
+
+    // ground effect compensation enable/disable
+    AP_Int8 gndeffect_comp_enabled;
+
+#if ADVANCED_FAILSAFE == ENABLED
+    // advanced failsafe library
+    AP_AdvancedFailsafe_Copter afs;
+#endif
 };
 
 extern const AP_Param::Info        var_info[];

@@ -162,6 +162,16 @@ public:
         return _baro;
     }
 
+    // get the index of the current primary accelerometer sensor
+    virtual uint8_t get_primary_accel_index(void) const {
+        return _ins.get_primary_accel();
+    }
+
+    // get the index of the current primary gyro sensor
+    virtual uint8_t get_primary_gyro_index(void) const {
+        return _ins.get_primary_gyro();
+    }
+    
     // accelerometer values in the earth frame in m/s/s
     virtual const Vector3f &get_accel_ef(uint8_t i) const {
         return _accel_ef[i];
@@ -290,6 +300,18 @@ public:
     // order. This will only be accurate if have_inertial_nav() is
     // true
     virtual bool get_relative_position_NED(Vector3f &vec) const {
+        return false;
+    }
+
+    // return a position relative to home in meters, North/East
+    // order. Return true if estimate is valid
+    virtual bool get_relative_position_NE(Vector2f &vecNE) const {
+        return false;
+    }
+
+    // return a Down position relative to home in meters
+    // Return true if estimate is valid
+    virtual bool get_relative_position_D(float &posD) const {
         return false;
     }
 

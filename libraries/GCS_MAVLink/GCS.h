@@ -15,6 +15,7 @@
 #include "MAVLink_routing.h"
 #include <AP_SerialManager/AP_SerialManager.h>
 #include <AP_Mount/AP_Mount.h>
+#include <AP_Avoidance/AP_Avoidance.h>
 #include <AP_HAL/utility/RingBuffer.h>
 
 // check if a message will fit in the payload space available
@@ -76,6 +77,7 @@ enum ap_message {
     MSG_MISSION_ITEM_REACHED,
     MSG_POSITION_TARGET_GLOBAL_INT,
     MSG_OT_PARACHUTE_STATUS,
+    MSG_ADSB_VEHICLE,
     MSG_RETRY_DEFERRED // this must be last
 };
 
@@ -100,6 +102,9 @@ public:
     void        set_snoop(void (*_msg_snoop)(const mavlink_message_t* msg)) {
         msg_snoop = _msg_snoop;
     }
+    // packetReceived is called on any successful decode of a mavlink message
+    virtual void packetReceived(const mavlink_status_t &status,
+                                mavlink_message_t &msg);
 
     struct statustext_t {
         uint8_t                 bitmask;
@@ -128,6 +133,7 @@ public:
                   STREAM_EXTRA2,
                   STREAM_EXTRA3,
                   STREAM_PARAMS,
+                  STREAM_ADSB,
                   NUM_STREAMS};
 
     // see if we should send a stream now. Called at 50Hz
@@ -165,6 +171,8 @@ public:
     void send_home(const Location &home) const;
     static void send_home_all(const Location &home);
     void send_heartbeat(uint8_t type, uint8_t base_mode, uint32_t custom_mode, uint8_t system_status);
+    void send_servo_output_raw(bool hil);
+    static void send_collision_all(const AP_Avoidance::Obstacle &threat, MAV_COLLISION_ACTION behaviour);
 
     // return a bitmap of active channels. Used by libraries to loop
     // over active channels to send to all active channels    
@@ -257,6 +265,7 @@ protected:
 
     void handle_log_message(mavlink_message_t *msg, DataFlash_Class &dataflash);
     void handle_setup_signing(const mavlink_message_t *msg);
+    uint8_t handle_preflight_reboot(const mavlink_command_long_t &packet, bool disable_overrides);
 
 private:
 
@@ -350,6 +359,9 @@ private:
     
     // bitmask of what mavlink channels are active
     static uint8_t mavlink_active;
+
+    // bitmask of what mavlink channels are streaming
+    static uint8_t chan_is_streaming;
 
     // mavlink routing object
     static MAVLink_routing routing;

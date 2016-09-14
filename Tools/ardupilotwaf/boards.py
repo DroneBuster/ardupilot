@@ -56,14 +56,15 @@ class Board:
 
         cfg.ap_common_checks()
 
+        cfg.env.prepend_value('INCLUDES', [
+            cfg.srcnode.find_dir('libraries/AP_Common/missing').abspath()
+        ])
+
+
     def configure_env(self, cfg, env):
         # Use a dictionary instead of the convetional list for definitions to
         # make easy to override them. Convert back to list before consumption.
         env.DEFINES = {}
-
-        env.prepend_value('INCLUDES', [
-            cfg.srcnode.find_dir('libraries/AP_Common/missing').abspath()
-        ])
 
         env.CFLAGS += [
             '-ffunction-sections',
@@ -138,7 +139,7 @@ class Board:
                 '-Wno-c++11-narrowing'
             ]
         else:
-            env.CXXFLAFS += [
+            env.CXXFLAGS += [
                 '-Werror=unused-but-set-variable'
             ]
 
@@ -148,9 +149,18 @@ class Board:
                 '-O0',
             ]
 
-        env.LINKFLAGS += [
-            '-Wl,--gc-sections',
-        ]
+        if cfg.env.DEST_OS == 'darwin':
+            env.LINKFLAGS += [
+                '-Wl,-dead_strip',
+            ]
+        else:
+            env.LINKFLAGS += [
+                '-Wl,--gc-sections',
+            ]
+
+        # We always want to use PRI format macros
+        cfg.define('__STDC_FORMAT_MACROS', 1)
+
 
     def build(self, bld):
         bld.ap_version_append_str('GIT_VERSION', bld.git_head_hash(short=True))
@@ -209,6 +219,8 @@ class linux(Board):
     def configure_env(self, cfg, env):
         super(linux, self).configure_env(cfg, env)
 
+        cfg.find_toolchain_program('pkg-config', var='PKGCONFIG')
+
         env.DEFINES.update(
             CONFIG_HAL_BOARD = 'HAL_BOARD_LINUX',
             CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_LINUX_NONE',
@@ -225,12 +237,14 @@ class linux(Board):
 
         cfg.check_librt(env)
         cfg.check_lttng(env)
+        cfg.check_libdl(env)
         cfg.check_libiio(env)
 
         env.LINKFLAGS += ['-pthread',]
         env.AP_LIBRARIES = [
             'AP_HAL_Linux',
         ]
+
 
 class minlure(linux):
     def configure_env(self, cfg, env):
@@ -310,7 +324,16 @@ class bebop(linux):
         env.DEFINES.update(
             CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_LINUX_BEBOP',
         )
-        env.STATIC_LINKING = True
+
+class disco(linux):
+    toolchain = 'arm-linux-gnueabihf'
+
+    def configure_env(self, cfg, env):
+        super(disco, self).configure_env(cfg, env)
+
+        env.DEFINES.update(
+            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_LINUX_DISCO',
+        )
 
 class raspilot(linux):
     toolchain = 'arm-linux-gnueabihf'
@@ -350,6 +373,14 @@ class pxfmini(linux):
 
         env.DEFINES.update(
             CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_LINUX_PXFMINI',
+        )
+
+class aero(linux):
+    def configure_env(self, cfg, env):
+        super(aero, self).configure_env(cfg, env)
+
+        env.DEFINES.update(
+            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_LINUX_AERO',
         )
 
 class px4(Board):

@@ -3,7 +3,7 @@
 #include "Copter.h"
 
 /*
- * control_stabilize.pde - init and run calls for stabilize flight mode
+ * Init and run calls for stabilize flight mode
  */
 
 // stabilize_init - initialise stabilize controller
@@ -34,6 +34,9 @@ void Copter::stabilize_run()
         return;
     }
 
+    // clear landing flag
+    set_land_complete(false);
+
     motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
 
     // apply SIMPLE mode transform to pilot inputs
@@ -50,7 +53,7 @@ void Copter::stabilize_run()
     pilot_throttle_scaled = get_pilot_desired_throttle(channel_throttle->get_control_in());
 
     // call attitude controller
-    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
+    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
 
     // body-frame rate controller is run directly from 100hz loop
 

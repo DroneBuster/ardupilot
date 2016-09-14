@@ -20,7 +20,17 @@ extern const AP_HAL::HAL& hal;
 #define MPU6000_DRDY_PIN RPI_GPIO_24
 #elif CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_MINLURE
 #define MPU6000_DRDY_PIN MINNOW_GPIO_I2S_CLK
+#elif CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DISCO
+#define MPU6000_EXT_SYNC_ENABLE 1
 #endif
+#endif
+
+/*
+  EXT_SYNC allows for frame synchronisation with an external device
+  such as a camera. When enabled the LSB of AccelZ holds the FSYNC bit
+ */
+#ifndef MPU6000_EXT_SYNC_ENABLE
+#define MPU6000_EXT_SYNC_ENABLE 0
 #endif
 
 // MPU 6000 registers
@@ -51,6 +61,13 @@ extern const AP_HAL::HAL& hal;
 #       define MPUREG_SMPLRT_100HZ                  0x09
 #       define MPUREG_SMPLRT_50HZ                   0x13
 #define MPUREG_CONFIG                           0x1A
+#       define MPUREG_CONFIG_EXT_SYNC_SHIFT            3
+#       define MPUREG_CONFIG_EXT_SYNC_GX            0x02
+#       define MPUREG_CONFIG_EXT_SYNC_GY            0x03
+#       define MPUREG_CONFIG_EXT_SYNC_GZ            0x04
+#       define MPUREG_CONFIG_EXT_SYNC_AX            0x05
+#       define MPUREG_CONFIG_EXT_SYNC_AY            0x06
+#       define MPUREG_CONFIG_EXT_SYNC_AZ            0x07
 #define MPUREG_GYRO_CONFIG                      0x1B
 // bit definitions for MPUREG_GYRO_CONFIG
 #       define BITS_GYRO_FS_250DPS                  0x00
@@ -217,13 +234,9 @@ static const float GYRO_SCALE = (0.0174532f / 16.4f);
 
 AP_InertialSensor_MPU6000::AP_InertialSensor_MPU6000(AP_InertialSensor &imu,
                                                      AP_HAL::OwnPtr<AP_HAL::Device> dev,
-                                                     enum bus_type type,
-                                                     bool use_fifo,
-                                                     uint8_t read_flag)
+                                                     bool use_fifo)
     : AP_InertialSensor_Backend(imu)
-    , _read_flag(read_flag)
     , _use_fifo(use_fifo)
-    , _bus_type(type)
     , _temp_filter(1000, 1)
     , _dev(std::move(dev))
 {
@@ -238,7 +251,7 @@ AP_InertialSensor_Backend *AP_InertialSensor_MPU6000::probe(AP_InertialSensor &i
                                                             AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev)
 {
     AP_InertialSensor_MPU6000 *sensor =
-        new AP_InertialSensor_MPU6000(imu, std::move(dev), BUS_TYPE_I2C, true, 0);
+        new AP_InertialSensor_MPU6000(imu, std::move(dev), true);
     if (!sensor || !sensor->_init()) {
         delete sensor;
         return nullptr;
@@ -252,8 +265,11 @@ AP_InertialSensor_Backend *AP_InertialSensor_MPU6000::probe(AP_InertialSensor &i
 AP_InertialSensor_Backend *AP_InertialSensor_MPU6000::probe(AP_InertialSensor &imu,
                                                             AP_HAL::OwnPtr<AP_HAL::SPIDevice> dev)
 {
-    AP_InertialSensor_MPU6000 *sensor =
-        new AP_InertialSensor_MPU6000(imu, std::move(dev), BUS_TYPE_SPI, false, 0x80);
+    AP_InertialSensor_MPU6000 *sensor;
+
+    dev->set_read_flag(0x80);
+
+    sensor = new AP_InertialSensor_MPU6000(imu, std::move(dev), false);
     if (!sensor || !sensor->_init()) {
         delete sensor;
         return nullptr;
@@ -298,7 +314,7 @@ void AP_InertialSensor_MPU6000::_fifo_enable()
 
 bool AP_InertialSensor_MPU6000::_has_auxiliary_bus()
 {
-    return _bus_type != BUS_TYPE_I2C;
+    return _dev->bus_type != AP_HAL::Device::BUS_TYPE_I2C;
 }
 
 void AP_InertialSensor_MPU6000::start()
@@ -388,9 +404,6 @@ bool AP_InertialSensor_MPU6000::update()
 
     _publish_temperature(_accel_instance, _temp_filtered);
 
-    /* give the temperature to the control loop in order to keep it constant*/
-    hal.util->set_imu_temp(_temp_filtered);
-
     return true;
 }
 
@@ -446,7 +459,12 @@ void AP_InertialSensor_MPU6000::_accumulate(uint8_t *samples, uint8_t n_samples)
         uint8_t *data = samples + MPU6000_SAMPLE_SIZE * i;
         Vector3f accel, gyro;
         float temp;
+        bool fsync_set = false;
 
+#if MPU6000_EXT_SYNC_ENABLE
+        fsync_set = (int16_val(data, 2) & 1U) != 0;
+#endif
+        
         accel = Vector3f(int16_val(data, 1),
                          int16_val(data, 0),
                          -int16_val(data, 2));
@@ -467,6 +485,9 @@ void AP_InertialSensor_MPU6000::_accumulate(uint8_t *samples, uint8_t n_samples)
 #elif CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BEBOP
         accel.rotate(ROTATION_YAW_270);
         gyro.rotate(ROTATION_YAW_270);
+#elif CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DISCO
+        accel.rotate(ROTATION_PITCH_180_YAW_90);
+        gyro.rotate(ROTATION_PITCH_180_YAW_90);
 #elif CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_MINLURE
         accel.rotate(ROTATION_YAW_90);
         gyro.rotate(ROTATION_YAW_90);
@@ -475,7 +496,7 @@ void AP_InertialSensor_MPU6000::_accumulate(uint8_t *samples, uint8_t n_samples)
         _rotate_and_correct_accel(_accel_instance, accel);
         _rotate_and_correct_gyro(_gyro_instance, gyro);
 
-        _notify_new_accel_raw_sample(_accel_instance, accel);
+        _notify_new_accel_raw_sample(_accel_instance, accel, AP_HAL::micros64(), fsync_set);
         _notify_new_gyro_raw_sample(_gyro_instance, gyro);
 
         _temp_filtered = _temp_filter.apply(temp);
@@ -543,39 +564,19 @@ void AP_InertialSensor_MPU6000::_read_sample()
 bool AP_InertialSensor_MPU6000::_block_read(uint8_t reg, uint8_t *buf,
                                             uint32_t size)
 {
-    reg |= _read_flag;
     return _dev->read_registers(reg, buf, size);
 }
 
 uint8_t AP_InertialSensor_MPU6000::_register_read(uint8_t reg)
 {
     uint8_t val = 0;
-
-    reg |= _read_flag;
     _dev->read_registers(reg, &val, 1);
-
     return val;
 }
 
 void AP_InertialSensor_MPU6000::_register_write(uint8_t reg, uint8_t val)
 {
     _dev->write_register(reg, val);
-}
-
-/*
-  useful when debugging SPI bus errors
- */
-void AP_InertialSensor_MPU6000::_register_write_check(uint8_t reg, uint8_t val)
-{
-    uint8_t readed;
-    _register_write(reg, val);
-    readed = _register_read(reg);
-    if (readed != val){
-        hal.console->printf("Values doesn't match; written: %02x; read: %02x ", val, readed);
-    }
-#if MPU6000_DEBUG
-    hal.console->printf("Values written: %02x; readed: %02x ", val, readed);
-#endif
 }
 
 /*
@@ -600,6 +601,12 @@ void AP_InertialSensor_MPU6000::_set_filter_register(uint16_t filter_hz)
     } else {
         filter = BITS_DLPF_CFG_256HZ_NOLPF2;
     }
+
+#if MPU6000_EXT_SYNC_ENABLE
+    // add in EXT_SYNC bit if enabled
+    filter |= (MPUREG_CONFIG_EXT_SYNC_AZ << MPUREG_CONFIG_EXT_SYNC_SHIFT);
+#endif
+
     _register_write(MPUREG_CONFIG, filter);
 }
 
@@ -631,7 +638,7 @@ bool AP_InertialSensor_MPU6000::_hardware_init(void)
         hal.scheduler->delay(100);
 
         /* bus-dependent initialization */
-        if (_bus_type == BUS_TYPE_SPI) {
+        if (_dev->bus_type == AP_HAL::Device::BUS_TYPE_SPI) {
             /* Disable I2C bus if SPI selected (Recommended in Datasheet to be
              * done just after the device is reset) */
             _register_write(MPUREG_USER_CTRL, BIT_USER_CTRL_I2C_IF_DIS);
@@ -743,7 +750,9 @@ int AP_MPU6000_AuxiliaryBusSlave::passthrough_read(uint8_t reg, uint8_t *buf,
     hal.scheduler->delay(10);
 
     auto &backend = AP_InertialSensor_MPU6000::from(_bus.get_backend());
-    backend._block_read(MPUREG_EXT_SENS_DATA_00 + _ext_sens_data, buf, size);
+    if (!backend._block_read(MPUREG_EXT_SENS_DATA_00 + _ext_sens_data, buf, size)) {
+        return -1;
+    }
 
     /* disable new reads */
     backend._register_write(_mpu6000_ctrl, 0);

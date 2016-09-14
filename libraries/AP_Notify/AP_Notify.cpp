@@ -49,6 +49,13 @@ const AP_Param::GroupInfo AP_Notify::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("BUZZ_ENABLE", 1, AP_Notify, _buzzer_enable, BUZZER_ON),
 
+    // @Param: LED_OVERRIDE
+    // @DisplayName: Setup for MAVLink LED override
+    // @Description: This sets up the board RGB LED for override by MAVLink. Normal notify LED control is disabled
+    // @Values: 0:Disable,1:Enable
+    // @User: Advanced
+    AP_GROUPINFO("LED_OVERRIDE", 2, AP_Notify, _rgb_led_override, 0),
+    
     AP_GROUPEND
 };
 
@@ -80,15 +87,16 @@ struct AP_Notify::notify_events_type AP_Notify::events;
 #endif
 
 #elif CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN
-    Buzzer buzzer;
+    ToneAlarm_PX4 tonealarm;
 #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_VRBRAIN_V45
     AP_BoardLED boardled;
 #else
     VRBoard_LED boardled;
 #endif
-    ToshibaLED_I2C toshibaled;
+    ToshibaLED_PX4 toshibaled;
     ExternalLED externalled;
-    NotifyDevice *AP_Notify::_devices[] = {&boardled, &toshibaled, &externalled, &buzzer};
+    NotifyDevice *AP_Notify::_devices[] = {&boardled, &toshibaled, &externalled, &tonealarm};
+
 #elif CONFIG_HAL_BOARD == HAL_BOARD_LINUX
     #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO
         NavioLED_I2C navioled;
@@ -162,5 +170,13 @@ void AP_Notify::handle_led_control(mavlink_message_t *msg)
 {
     for (uint8_t i = 0; i < CONFIG_NOTIFY_DEVICES_COUNT; i++) {
         _devices[i]->handle_led_control(msg);
+    }
+}
+
+// handle a PLAY_TUNE message
+void AP_Notify::handle_play_tune(mavlink_message_t *msg)
+{
+    for (uint8_t i = 0; i < CONFIG_NOTIFY_DEVICES_COUNT; i++) {
+        _devices[i]->handle_play_tune(msg);
     }
 }

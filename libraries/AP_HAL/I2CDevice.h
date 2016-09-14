@@ -27,6 +27,8 @@ namespace AP_HAL {
 
 class I2CDevice : public Device {
 public:
+    I2CDevice() : Device(BUS_TYPE_I2C) { }
+
     virtual ~I2CDevice() { }
 
     /*
@@ -58,11 +60,12 @@ public:
     virtual Semaphore *get_semaphore() override = 0;
 
     /* See Device::register_periodic_callback() */
-    virtual Device::PeriodicHandle *register_periodic_callback(
-        uint32_t period_usec, MemberProc) override = 0;
+    virtual Device::PeriodicHandle register_periodic_callback(
+        uint32_t period_usec, Device::PeriodicCb) override = 0;
 
-    /* See Device::get_fd() */
-    virtual int get_fd() override = 0;
+    /* See Device::adjust_periodic_callback() */
+    virtual bool adjust_periodic_callback(
+        Device::PeriodicHandle h, uint32_t period_usec) override = 0;
 };
 
 class I2CDeviceManager {

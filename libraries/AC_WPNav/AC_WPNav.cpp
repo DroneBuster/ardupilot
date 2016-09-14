@@ -92,11 +92,18 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] = {
     // @DisplayName: Loiter minimum acceleration
     // @Description: Loiter minimum acceleration in cm/s/s. Higher values stop the copter more quickly when the stick is centered, but cause a larger jerk when the copter stops.
     // @Units: cm/s/s
-    // @Range: 100 981
+    // @Range: 25 250
     // @Increment: 1
     // @User: Advanced
     AP_GROUPINFO("LOIT_MINA",   9, AC_WPNav, _loiter_accel_min_cmss, WPNAV_LOITER_ACCEL_MIN),
 
+    // @Param: RFND_USE
+    // @DisplayName: Use rangefinder for terrain following
+    // @Description: This controls the use of a rangefinder for terrain following
+    // @Values: 0:Disable,1:Enable
+    // @User: Advanced
+    AP_GROUPINFO("RFND_USE",   10, AC_WPNav, _rangefinder_use, 1),
+    
     AP_GROUPEND
 };
 
@@ -166,14 +173,6 @@ void AC_WPNav::init_loiter_target(const Vector3f& position, bool reset_I)
     // initialise pilot input
     _pilot_accel_fwd_cms = 0;
     _pilot_accel_rgt_cms = 0;
-}
-
-/// shift_loiter_target - shifts the loiter target by the given pos_adjustment
-///     used by precision landing to adjust horizontal position target
-void AC_WPNav::shift_loiter_target(const Vector3f &pos_adjustment)
-{
-    // move pos controller target
-    _pos_control.shift_pos_xy_target(pos_adjustment.x, pos_adjustment.y);
 }
 
 /// init_loiter_target - initialize's loiter position and feed-forward velocity from current pos and velocity
@@ -302,6 +301,11 @@ void AC_WPNav::calc_loiter_desired_velocity(float nav_dt, float ekfGndSpdLimit)
     if (horizSpdDem > gnd_speed_limit_cms) {
         desired_vel.x = desired_vel.x * gnd_speed_limit_cms / horizSpdDem;
         desired_vel.y = desired_vel.y * gnd_speed_limit_cms / horizSpdDem;
+    }
+
+    // Limit the velocity to prevent fence violations
+    if (_avoid != NULL) {
+        _avoid->adjust_velocity(_pos_control.get_pos_xy_kP(), _loiter_accel_cmss, desired_vel);
     }
 
     // send adjusted feed forward velocity back to position controller
@@ -1156,7 +1160,7 @@ bool AC_WPNav::get_terrain_offset(float& offset_cm)
 {
 #if AP_TERRAIN_AVAILABLE
     // use range finder if connected
-    if (_rangefinder_use) {
+    if (_rangefinder_available && _rangefinder_use) {
         if (_rangefinder_healthy) {
             offset_cm = _inav.get_altitude() - _rangefinder_alt_cm;
             return true;

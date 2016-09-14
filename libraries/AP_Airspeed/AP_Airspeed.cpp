@@ -21,8 +21,10 @@
 #include <AP_ADC/AP_ADC.h>
 #include <AP_Common/AP_Common.h>
 #include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/I2CDevice.h>
 #include <AP_Math/AP_Math.h>
 #include <GCS_MAVLink/GCS.h>
+#include <utility>
 
 extern const AP_HAL::HAL &hal;
 
@@ -49,7 +51,9 @@ extern const AP_HAL::HAL &hal;
  #define ARSPD_DEFAULT_PIN 0
 #elif defined(CONFIG_ARCH_BOARD_VRUBRAIN_V52)
  #define ARSPD_DEFAULT_PIN 0
-#elif defined(CONFIG_ARCH_BOARD_VRHERO_V10)
+#elif defined(CONFIG_ARCH_BOARD_VRCORE_V10)
+ #define ARSPD_DEFAULT_PIN 0
+#elif defined(CONFIG_ARCH_BOARD_VRBRAIN_V54)
  #define ARSPD_DEFAULT_PIN 0
 #elif defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
  #define ARSPD_DEFAULT_PIN 11
@@ -62,8 +66,15 @@ extern const AP_HAL::HAL &hal;
     #else
          #define ARSPD_DEFAULT_PIN AP_AIRSPEED_I2C_PIN
     #endif
+    #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DISCO
+         #define PSI_RANGE_DEFAULT 0.05
+    #endif
 #else
  #define ARSPD_DEFAULT_PIN 0
+#endif
+
+#ifndef PSI_RANGE_DEFAULT
+#define PSI_RANGE_DEFAULT 1.0f
 #endif
 
 // table of user settable parameters
@@ -73,7 +84,7 @@ const AP_Param::GroupInfo AP_Airspeed::var_info[] = {
     // @DisplayName: Airspeed enable
     // @Description: enable airspeed sensor
     // @Values: 0:Disable,1:Enable
-    AP_GROUPINFO("ENABLE",    0, AP_Airspeed, _enable, 1),
+    AP_GROUPINFO_FLAGS("ENABLE", 0, AP_Airspeed, _enable, 1, AP_PARAM_FLAG_ENABLE),
 
     // @Param: USE
     // @DisplayName: Airspeed use
@@ -118,8 +129,22 @@ const AP_Param::GroupInfo AP_Airspeed::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("SKIP_CAL",  7, AP_Airspeed, _skip_cal, 0),
 
+    // @Param: PSI_RANGE
+    // @DisplayName: The PSI range of the device
+    // @Description: This parameter allows you to to set the PSI (pounds per square inch) range for your sensor. You should not change this unless you examine the datasheet for your device
+    // @User: Advanced
+    AP_GROUPINFO("PSI_RANGE",  8, AP_Airspeed, _psi_range, PSI_RANGE_DEFAULT),
+    
     AP_GROUPEND
 };
+
+
+AP_Airspeed::AP_Airspeed()
+    : _EAS2TAS(1.0f)
+    , _calibration()
+{
+    AP_Param::setup_object_defaults(this, var_info);
+}
 
 
 /*
@@ -186,11 +211,18 @@ void AP_Airspeed::calibrate(bool in_startup)
     _cal.start_ms = AP_HAL::millis();
     _cal.count = 0;
     _cal.sum = 0;
+    _cal.read_count = 0;
 }
 
+/*
+  update async airspeed calibration
+*/
 void AP_Airspeed::update_calibration(float raw_pressure)
 {
-    if (AP_HAL::millis() - _cal.start_ms >= 1000) {
+    // consider calibration complete when we have at least 10 samples
+    // over at least 1 second
+    if (AP_HAL::millis() - _cal.start_ms >= 1000 &&
+        _cal.read_count > 10) {
         if (_cal.count == 0) {
             GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_INFO, "Airspeed sensor unhealthy");
         } else {
@@ -204,6 +236,7 @@ void AP_Airspeed::update_calibration(float raw_pressure)
         _cal.sum += raw_pressure;
         _cal.count++;
     }
+    _cal.read_count++;
 }
 
 // read the airspeed sensor

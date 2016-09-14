@@ -24,8 +24,9 @@
 #define ACC_P_NSE_DEFAULT       6.0E-01f
 #define GBIAS_P_NSE_DEFAULT     1.0E-04f
 #define GSCALE_P_NSE_DEFAULT    5.0E-04f
-#define ABIAS_P_NSE_DEFAULT     1.0E-03f
-#define MAG_P_NSE_DEFAULT       2.5E-02f
+#define ABIAS_P_NSE_DEFAULT     5.0E-03f
+#define MAGB_P_NSE_DEFAULT      1.0E-04f
+#define MAGE_P_NSE_DEFAULT      1.0E-03f
 #define VEL_I_GATE_DEFAULT      500
 #define POS_I_GATE_DEFAULT      500
 #define HGT_I_GATE_DEFAULT      500
@@ -48,8 +49,9 @@
 #define ACC_P_NSE_DEFAULT       6.0E-01f
 #define GBIAS_P_NSE_DEFAULT     1.0E-04f
 #define GSCALE_P_NSE_DEFAULT    5.0E-04f
-#define ABIAS_P_NSE_DEFAULT     1.0E-03f
-#define MAG_P_NSE_DEFAULT       2.5E-02f
+#define ABIAS_P_NSE_DEFAULT     5.0E-03f
+#define MAGB_P_NSE_DEFAULT      1.0E-04f
+#define MAGE_P_NSE_DEFAULT      1.0E-03f
 #define VEL_I_GATE_DEFAULT      500
 #define POS_I_GATE_DEFAULT      500
 #define HGT_I_GATE_DEFAULT      500
@@ -72,8 +74,9 @@
 #define ACC_P_NSE_DEFAULT       6.0E-01f
 #define GBIAS_P_NSE_DEFAULT     1.0E-04f
 #define GSCALE_P_NSE_DEFAULT    5.0E-04f
-#define ABIAS_P_NSE_DEFAULT     1.0E-03f
-#define MAG_P_NSE_DEFAULT       2.5E-02f
+#define ABIAS_P_NSE_DEFAULT     5.0E-03f
+#define MAGB_P_NSE_DEFAULT      1.0E-04f
+#define MAGE_P_NSE_DEFAULT      1.0E-03f
 #define VEL_I_GATE_DEFAULT      500
 #define POS_I_GATE_DEFAULT      500
 #define HGT_I_GATE_DEFAULT      500
@@ -96,8 +99,9 @@
 #define ACC_P_NSE_DEFAULT       6.0E-01f
 #define GBIAS_P_NSE_DEFAULT     1.0E-04f
 #define GSCALE_P_NSE_DEFAULT    5.0E-04f
-#define ABIAS_P_NSE_DEFAULT     1.0E-03f
-#define MAG_P_NSE_DEFAULT       2.5E-02f
+#define ABIAS_P_NSE_DEFAULT     5.0E-03f
+#define MAGB_P_NSE_DEFAULT      1.0E-04f
+#define MAGE_P_NSE_DEFAULT      1.0E-03f
 #define VEL_I_GATE_DEFAULT      500
 #define POS_I_GATE_DEFAULT      500
 #define HGT_I_GATE_DEFAULT      500
@@ -197,7 +201,7 @@ const AP_Param::GroupInfo NavEKF2::var_info[] = {
 
     // @Param: ALT_SOURCE
     // @DisplayName: Primary height source
-    // @Description: This parameter controls which height sensor is used by the EKF. If the selected optionn cannot be used, it will default to Baro as the primary height source. Setting 0 will use the baro altitude at all times. Setting 1 uses the range finder and is only available in combination with optical flow navigation (EK2_GPS_TYPE = 3). Setting 2 uses GPS.
+    // @Description: This parameter controls the primary height sensor used by the EKF. If the selected option cannot be used, it will default to Baro as the primary height source. Setting 0 will use the baro altitude at all times. Setting 1 uses the range finder and is only available in combination with optical flow navigation (EK2_GPS_TYPE = 3). Setting 2 uses GPS. NOTE - the EK2_RNG_USE_HGT parameter can be used to switch to range-finder when close to the ground.
     // @Values: 0:Use Baro, 1:Use Range Finder, 2:Use GPS
     // @User: Advanced
     AP_GROUPINFO("ALT_SOURCE", 9, NavEKF2, _altSource, 0),
@@ -373,13 +377,7 @@ const AP_Param::GroupInfo NavEKF2::var_info[] = {
     // @Units: m/s/s/s
     AP_GROUPINFO("ABIAS_P_NSE", 28, NavEKF2, _accelBiasProcessNoise, ABIAS_P_NSE_DEFAULT),
 
-    // @Param: MAG_P_NSE
-    // @DisplayName: Magnetic field process noise (gauss/s)
-    // @Description: This state process noise controls the growth of magnetic field state error estimates. Increasing it makes magnetic field bias estimation faster and noisier.
-    // @Range: 0.0001 0.01
-    // @User: Advanced
-    // @Units: gauss/s
-    AP_GROUPINFO("MAG_P_NSE", 29, NavEKF2, _magProcessNoise, MAG_P_NSE_DEFAULT),
+    // 29 previously used for EK2_MAG_P_NSE parameter that has been replaced with EK2_MAGE_P_NSE and EK2_MAGB_P_NSE
 
     // @Param: WIND_P_NSE
     // @DisplayName: Wind velocity process noise (m/s^2)
@@ -434,7 +432,59 @@ const AP_Param::GroupInfo NavEKF2::var_info[] = {
     // @Values: 0:Disabled,1:FirstIMU,3:FirstAndSecondIMU,7:AllIMUs
     // @User: Advanced
     AP_GROUPINFO("LOG_MASK", 36, NavEKF2, _logging_mask, 1),
-    
+
+    // control of magentic yaw angle fusion
+
+    // @Param: YAW_M_NSE
+    // @DisplayName: Yaw measurement noise (rad)
+    // @Description: This is the RMS value of noise in yaw measurements from the magnetometer. Increasing it reduces the weighting on these measurements.
+    // @Range: 0.05 1.0
+    // @Increment: 0.05
+    // @User: Advanced
+    // @Units: gauss
+    AP_GROUPINFO("YAW_M_NSE", 37, NavEKF2, _yawNoise, 0.5f),
+
+    // @Param: YAW_I_GATE
+    // @DisplayName: Yaw measurement gate size
+    // @Description: This sets the percentage number of standard deviations applied to the magnetometer yaw measurement innovation consistency check. Decreasing it makes it more likely that good measurements will be rejected. Increasing it makes it more likely that bad measurements will be accepted.
+    // @Range: 100 1000
+    // @Increment: 25
+    // @User: Advanced
+    AP_GROUPINFO("YAW_I_GATE", 38, NavEKF2, _yawInnovGate, 300),
+
+    // @Param: TAU_OUTPUT
+    // @DisplayName: Output complementary filter time constant (centi-sec)
+    // @Description: Sets the time constant of the output complementary filter/predictor in centi-seconds.
+    // @Range: 10 50
+    // @Increment: 5
+    // @User: Advanced
+    AP_GROUPINFO("TAU_OUTPUT", 39, NavEKF2, _tauVelPosOutput, 25),
+
+    // @Param: MAGE_P_NSE
+    // @DisplayName: Earth magnetic field process noise (gauss/s)
+    // @Description: This state process noise controls the growth of earth magnetic field state error estimates. Increasing it makes earth magnetic field estimation faster and noisier.
+    // @Range: 0.00001 0.01
+    // @User: Advanced
+    // @Units: gauss/s
+    AP_GROUPINFO("MAGE_P_NSE", 40, NavEKF2, _magEarthProcessNoise, MAGE_P_NSE_DEFAULT),
+
+    // @Param: MAGB_P_NSE
+    // @DisplayName: Body magnetic field process noise (gauss/s)
+    // @Description: This state process noise controls the growth of body magnetic field state error estimates. Increasing it makes magnetometer bias error estimation faster and noisier.
+    // @Range: 0.00001 0.01
+    // @User: Advanced
+    // @Units: gauss/s
+    AP_GROUPINFO("MAGB_P_NSE", 41, NavEKF2, _magBodyProcessNoise, MAGB_P_NSE_DEFAULT),
+
+    // @Param: RNG_USE_HGT
+    // @DisplayName: Range finder switch height percentage
+    // @Description: The range finder will be used as the primary height source when below a specified percentage of the sensor maximum as set by the RNGFND_MAX_CM parameter. Set to -1 to prevent range finder use.
+    // @Range: -1 70
+    // @Increment: 1
+    // @User: Advanced
+    // @Units: %
+    AP_GROUPINFO("RNG_USE_HGT", 42, NavEKF2, _useRngSwHgt, -1),
+
     AP_GROUPEND
 };
 
@@ -632,17 +682,38 @@ int8_t NavEKF2::getPrimaryCoreIndex(void) const
     return primary;
 }
 
+// returns the index of the IMU of the primary core
+// return -1 if no primary core selected
+int8_t NavEKF2::getPrimaryCoreIMUIndex(void) const
+{
+    if (!core) {
+        return -1;
+    }
+    return core[primary].getIMUIndex();
+}
 
-// Return the last calculated NED position relative to the reference point (m).
+// Write the last calculated NE position relative to the reference point (m).
 // If a calculated solution is not available, use the best available data and return false
 // If false returned, do not use for flight control
-bool NavEKF2::getPosNED(int8_t instance, Vector3f &pos)
+bool NavEKF2::getPosNE(int8_t instance, Vector2f &posNE)
 {
     if (instance < 0 || instance >= num_cores) instance = primary;
     if (!core) {
         return false;
     }
-    return core[instance].getPosNED(pos);
+    return core[instance].getPosNE(posNE);
+}
+
+// Write the last calculated D position relative to the reference point (m).
+// If a calculated solution is not available, use the best available data and return false
+// If false returned, do not use for flight control
+bool NavEKF2::getPosD(int8_t instance, float &posD)
+{
+    if (instance < 0 || instance >= num_cores) instance = primary;
+    if (!core) {
+        return false;
+    }
+    return core[instance].getPosD(posD);
 }
 
 // return NED velocity in m/s
@@ -704,7 +775,9 @@ void NavEKF2::getTiltError(int8_t instance, float &ang)
 void NavEKF2::resetGyroBias(void)
 {
     if (core) {
-        core[primary].resetGyroBias();
+        for (uint8_t i=0; i<num_cores; i++) {
+            core[i].resetGyroBias();
+        }
     }
 }
 
@@ -715,10 +788,17 @@ void NavEKF2::resetGyroBias(void)
 // If using a range finder for height no reset is performed and it returns false
 bool NavEKF2::resetHeightDatum(void)
 {
-    if (!core) {
-        return false;
+    bool status = true;
+    if (core) {
+        for (uint8_t i=0; i<num_cores; i++) {
+            if (!core[i].resetHeightDatum()) {
+                status = false;
+            }
+        }
+    } else {
+        status = false;
     }
-    return core[primary].resetHeightDatum();
+    return status;
 }
 
 // Commands the EKF to not use GPS.
@@ -889,6 +969,15 @@ void NavEKF2::getInnovations(int8_t instance, Vector3f &velInnov, Vector3f &posI
     }
 }
 
+// publish output observer angular, velocity and position tracking error
+void NavEKF2::getOutputTrackingError(int8_t instance, Vector3f &error) const
+{
+    if (instance < 0 || instance >= num_cores) instance = primary;
+    if (core) {
+        core[instance].getOutputTrackingError(error);
+    }
+}
+
 // return the innovation consistency test ratios for the velocity, position, magnetometer and true airspeed measurements
 void NavEKF2::getVariances(int8_t instance, float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar, Vector2f &offset)
 {
@@ -938,7 +1027,9 @@ void NavEKF2::getFlowDebug(int8_t instance, float &varFlow, float &gndOffset, fl
 void NavEKF2::setTakeoffExpected(bool val)
 {
     if (core) {
-        core[primary].setTakeoffExpected(val);
+        for (uint8_t i=0; i<num_cores; i++) {
+            core[i].setTakeoffExpected(val);
+        }
     }
 }
 
@@ -947,8 +1038,23 @@ void NavEKF2::setTakeoffExpected(bool val)
 void NavEKF2::setTouchdownExpected(bool val)
 {
     if (core) {
-        core[primary].setTouchdownExpected(val);
+        for (uint8_t i=0; i<num_cores; i++) {
+            core[i].setTouchdownExpected(val);
+        }
     }
+}
+
+// Set to true if the terrain underneath is stable enough to be used as a height reference
+// in combination with a range finder. Set to false if the terrain underneath the vehicle
+// cannot be used as a height reference
+void NavEKF2::setTerrainHgtStable(bool val)
+{
+    if (core) {
+        for (uint8_t i=0; i<num_cores; i++) {
+            core[i].setTerrainHgtStable(val);
+        }
+    }
+
 }
 
 /*

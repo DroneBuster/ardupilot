@@ -402,6 +402,8 @@ const AP_Param::GroupInfo NavEKF::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("GPS_CHECK",    33, NavEKF, _gpsCheck, 31),
 
+    // **NOTE** index 34 is "Enable" and is at the top for AP_PARAM_FLAG_ENABLE
+
     AP_GROUPEND
 };
 
@@ -470,15 +472,26 @@ bool NavEKF::healthy(void) const
     return core->healthy();
 }
 
-// Return the last calculated NED position relative to the reference point (m).
+// Write the last calculated North East position relative to the reference point (m).
 // If a calculated solution is not available, use the best available data and return false
 // If false returned, do not use for flight control
-bool NavEKF::getPosNED(Vector3f &pos) const
+bool NavEKF::getPosNE(Vector2f &posNE) const
 {
     if (!core) {
         return false;
     }
-    return core->getPosNED(pos);
+    return core->getPosNE(posNE);
+}
+
+// Write the last calculated Down position relative to the reference point (m).
+// If a calculated solution is not available, use the best available data and return false
+// If false returned, do not use for flight control
+bool NavEKF::getPosD(float &posD) const
+{
+    if (!core) {
+        return false;
+    }
+    return core->getPosD(posD);
 }
 
 // return NED velocity in m/s

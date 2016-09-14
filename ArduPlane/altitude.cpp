@@ -75,6 +75,7 @@ void Plane::setup_glide_slope(void)
      */
     switch (control_mode) {
     case RTL:
+    case AVOID_ADSB:
     case GUIDED:
         /* glide down slowly if above target altitude, but ascend more
            rapidly if below it. See
@@ -139,9 +140,11 @@ int32_t Plane::relative_altitude_abs_cm(void)
  */
 float Plane::relative_ground_altitude(bool use_rangefinder_if_available)
 {
-    if (use_rangefinder_if_available && rangefinder_state.in_range) {
+#if RANGEFINDER_ENABLED == ENABLED
+   if (use_rangefinder_if_available && rangefinder_state.in_range) {
         return rangefinder_state.height_estimate;
     }
+#endif
 
 #if AP_TERRAIN_AVAILABLE
     float altitude;
@@ -247,7 +250,7 @@ int32_t Plane::relative_target_altitude_cm(void)
     }
 #endif
     int32_t relative_alt = target_altitude.amsl_cm - home.alt;
-    relative_alt += int32_t(g.alt_offset)*100;
+    relative_alt += mission_alt_offset()*100;
     relative_alt += rangefinder_correction() * 100;
     return relative_alt;
 }
@@ -449,7 +452,7 @@ void Plane::setup_terrain_target_alt(Location &loc)
  */
 int32_t Plane::adjusted_altitude_cm(void)
 {
-    return current_loc.alt - (g.alt_offset*100);
+    return current_loc.alt - (mission_alt_offset()*100);
 }
 
 /*
@@ -460,6 +463,25 @@ int32_t Plane::adjusted_altitude_cm(void)
 int32_t Plane::adjusted_relative_altitude_cm(void)
 {
     return adjusted_altitude_cm() - home.alt;
+}
+
+
+/*
+  return the mission altitude offset. This raises or lowers all
+  mission items. It is primarily set using the ALT_OFFSET parameter,
+  but can also be adjusted by the rangefinder landing code for a
+  NAV_LAND command if we have aborted a steep landing
+ */
+float Plane::mission_alt_offset(void)
+{
+    float ret = g.alt_offset;
+    if (control_mode == AUTO &&
+            (auto_state.land_in_progress || auto_state.wp_is_land_approach)) {
+        // when landing after an aborted landing due to too high glide
+        // slope we use an offset from the last landing attempt
+        ret += auto_state.land_alt_offset;
+    }
+    return ret;
 }
 
 /*

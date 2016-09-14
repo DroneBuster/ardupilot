@@ -4,7 +4,7 @@
 
 #if FRAME_CONFIG == HELI_FRAME
 /*
- * heli_control_acro.pde - init and run calls for acro flight mode for trad heli
+ * Init and run calls for acro flight mode for trad heli
  */
 
 // heli_acro_init - initialise acro controller
@@ -46,6 +46,11 @@ void Copter::heli_acro_run()
             heli_flags.init_targets_on_arming=false;
         }
     }   
+
+    // clear landing flag above zero throttle
+    if (motors.armed() && motors.get_interlock() && motors.rotor_runup_complete() && !ap.throttle_zero) {
+        set_land_complete(false);
+    }
 
     if (!motors.has_flybar()){
         // convert the input to the desired body frame rate

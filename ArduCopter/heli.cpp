@@ -75,8 +75,6 @@ void Copter::check_dynamic_flight(void)
 // should be run between the rate controller and the servo updates.
 void Copter::update_heli_control_dynamics(void)
 {
-    static int16_t hover_roll_trim_scalar_slew = 0;
-
     // Use Leaky_I if we are not moving fast
     attitude_control.use_leaky_i(!heli_flags.dynamic_flight);
 
@@ -87,10 +85,10 @@ void Copter::update_heli_control_dynamics(void)
         // if we are not landed and motor power is demanded, increment slew scalar
         hover_roll_trim_scalar_slew++;
     }
-    hover_roll_trim_scalar_slew = constrain_int16(hover_roll_trim_scalar_slew, 0, MAIN_LOOP_RATE);
+    hover_roll_trim_scalar_slew = constrain_int16(hover_roll_trim_scalar_slew, 0, scheduler.get_loop_rate_hz());
 
     // set hover roll trim scalar, will ramp from 0 to 1 over 1 second after we think helicopter has taken off
-    attitude_control.set_hover_roll_trim_scalar((float)(hover_roll_trim_scalar_slew/MAIN_LOOP_RATE));
+    attitude_control.set_hover_roll_trim_scalar((float)(hover_roll_trim_scalar_slew/scheduler.get_loop_rate_hz()));
 }
 
 // heli_update_landing_swash - sets swash plate flag so higher minimum is used when landed or landing
@@ -149,10 +147,10 @@ void Copter::heli_update_rotor_speed_targets()
         case ROTOR_CONTROL_MODE_SPEED_PASSTHROUGH:
             // pass through pilot desired rotor speed if control input is higher than 10, creating a deadband at the bottom
             if (rsc_control_deglitched > 0.01f) {
-                motors.set_interlock(true);
+                ap.motor_interlock_switch = true;
                 motors.set_desired_rotor_speed(rsc_control_deglitched);
             } else {
-                motors.set_interlock(false);
+                ap.motor_interlock_switch = false;
                 motors.set_desired_rotor_speed(0.0f);
             }
             break;
@@ -162,10 +160,10 @@ void Copter::heli_update_rotor_speed_targets()
             // pass setpoint through as desired rotor speed, this is almost pointless as the Setpoint serves no function in this mode
             // other than being used to create a crude estimate of rotor speed
             if (rsc_control_deglitched > 0.0f) {
-                motors.set_interlock(true);
+                ap.motor_interlock_switch = true;
                 motors.set_desired_rotor_speed(motors.get_rsc_setpoint());
             }else{
-                motors.set_interlock(false);
+                ap.motor_interlock_switch = false;
                 motors.set_desired_rotor_speed(0.0f);
             }
             break;

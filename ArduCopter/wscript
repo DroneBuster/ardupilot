@@ -5,12 +5,13 @@ def build(bld):
     vehicle = bld.path.name
     bld.ap_stlib(
         name=vehicle + '_libs',
-        vehicle=vehicle,
-        libraries=bld.ap_common_vehicle_libraries() + [
+        ap_vehicle=vehicle,
+        ap_libraries=bld.ap_common_vehicle_libraries() + [
             'AP_ADSB',
             'AC_AttitudeControl',
             'AC_InputManager',
             'AC_Fence',
+            'AC_Avoidance',
             'AC_PID',
             'AC_PrecLand',
             'AC_Sprayer',
@@ -27,8 +28,9 @@ def build(bld):
             'AP_RCMapper',
             'AP_Relay',
             'AP_ServoRelayEvents',
+            'AP_Avoidance',
+            'AP_AdvancedFailsafe'
         ],
-        use='mavlink',
     )
 
     frames = (

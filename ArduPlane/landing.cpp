@@ -33,7 +33,7 @@ bool Plane::verify_land()
             mission.resume();
             if (!success) {
                 // on a restart failure lets RTL or else the plane may fly away with nowhere to go!
-                set_mode(RTL);
+                set_mode(RTL, MODE_REASON_MISSION_END);
             }
             // make sure to return false so it leaves the mission index alone
         }
@@ -70,7 +70,7 @@ bool Plane::verify_land()
                               flight_stage == AP_SpdHgtControl::FLIGHT_LAND_PREFLARE);
     bool below_flare_alt = (height <= g.land_flare_alt);
     bool below_flare_sec = (aparm.land_flare_sec > 0 && height <= auto_state.sink_rate * aparm.land_flare_sec);
-    bool probably_crashed = (fabsf(auto_state.sink_rate) < 0.2f && !is_flying());
+    bool probably_crashed = (g.crash_detection_enable && fabsf(auto_state.sink_rate) < 0.2f && !is_flying());
 
     if ((on_approach_stage && below_flare_alt) ||
         (on_approach_stage && below_flare_sec && (auto_state.wp_proportion > 0.5)) ||
@@ -182,10 +182,7 @@ void Plane::adjust_landing_slope_for_rangefinder_bump(void)
 
     // re-calculate auto_state.land_slope with updated prev_WP_loc
     setup_landing_glide_slope();
-    float new_slope_deg = degrees(atan(auto_state.land_slope));
-
-    GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_INFO, "Landing glide slope re-calculated as %.1f degrees", (double)new_slope_deg);
-
+    
     if (rangefinder_state.correction >= 0) { // we're too low or object is below us
         // correction positive means we're too low so we should continue on with
         // the newly computed shallower slope instead of pitching/throttling up
@@ -198,12 +195,15 @@ void Plane::adjust_landing_slope_for_rangefinder_bump(void)
         // offset and "perfect" slope.
 
         // calculate projected slope with projected alt
+        float new_slope_deg = degrees(atan(auto_state.land_slope));
         float initial_slope_deg = degrees(atan(auto_state.initial_land_slope));
 
         // is projected slope too steep?
         if (new_slope_deg - initial_slope_deg > g.land_slope_recalc_steep_threshold_to_abort) {
-            GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_INFO, "Slope re-calculated too steep, abort landing!");
-            barometer.set_baro_drift_altitude(barometer.get_baro_drift_offset() - rangefinder_state.correction);
+            GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_INFO, "Steep landing slope (%.0fm %.1fdeg)",
+                                             (double)rangefinder_state.correction, (double)(new_slope_deg - initial_slope_deg));
+            GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_INFO, "aborting landing!");
+            auto_state.land_alt_offset = rangefinder_state.correction;
             auto_state.commanded_go_around = 1;
             g.land_slope_recalc_steep_threshold_to_abort = 0; // disable this feature so we only perform it once
         }
@@ -368,7 +368,9 @@ bool Plane::jump_to_landing_sequence(void)
     uint16_t land_idx = mission.get_landing_sequence_start();
     if (land_idx != 0) {
         if (mission.set_current_cmd(land_idx)) {
-            set_mode(AUTO);
+
+            // in case we're in RTL
+            set_mode(AUTO, MODE_REASON_UNKNOWN);
 
             //if the mission has ended it has to be restarted
             if (mission.state() == AP_Mission::MISSION_STOPPED) {

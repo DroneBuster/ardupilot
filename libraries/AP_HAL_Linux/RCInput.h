@@ -4,7 +4,9 @@
 
 #define LINUX_RC_INPUT_NUM_CHANNELS 16
 
-class Linux::RCInput : public AP_HAL::RCInput {
+namespace Linux {
+
+class RCInput : public AP_HAL::RCInput {
 public:
     RCInput();
 
@@ -28,16 +30,18 @@ public:
 
     // add some DSM input bytes, for RCInput over a serial port
     void add_dsm_input(const uint8_t *bytes, size_t nbytes);
-    
-    
- protected:
+
+    // add some SBUS input bytes, for RCInput over a serial port
+    void add_sbus_input(const uint8_t *bytes, size_t nbytes);
+
+
+protected:
     void _process_rc_pulse(uint16_t width_s0, uint16_t width_s1);
     void _update_periods(uint16_t *periods, uint8_t len);
 
- private:
     volatile bool new_rc_input;
 
-    uint16_t _pwm_values[LINUX_RC_INPUT_NUM_CHANNELS];    
+    uint16_t _pwm_values[LINUX_RC_INPUT_NUM_CHANNELS];
     uint8_t  _num_channels;
 
     void _process_ppmsum_pulse(uint16_t width);
@@ -71,7 +75,13 @@ public:
         uint8_t partial_frame_count;
         uint32_t last_input_ms;
     } dsm;
+
+    // state of add_sbus_input
+    struct {
+        uint8_t frame[25];
+        uint8_t partial_frame_count;
+        uint32_t last_input_ms;
+    } sbus;
 };
 
-#include "RCInput_PRU.h"
-#include "RCInput_ZYNQ.h"
+}

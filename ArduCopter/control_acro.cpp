@@ -3,7 +3,7 @@
 
 
 /*
- * control_acro.pde - init and run calls for acro flight mode
+ * Init and run calls for acro flight mode
  */
 
 // acro_init - initialise acro controller
@@ -32,6 +32,9 @@ void Copter::acro_run()
         attitude_control.set_throttle_out_unstabilized(0,true,g.throttle_filt);
         return;
     }
+
+    // clear landing flag
+    set_land_complete(false);
 
     motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
 

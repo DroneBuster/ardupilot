@@ -24,6 +24,8 @@ bool Copter::all_arming_checks_passing(bool arming_from_gcs)
 {
     if (pre_arm_checks(true)) {
         set_pre_arm_check(true);
+    } else {
+        return false;
     }
 
     return ap.pre_arm_check && arm_checks(true, arming_from_gcs);
@@ -51,7 +53,7 @@ bool Copter::pre_arm_checks(bool display_failure)
     // if it is, switch needs to be in disabled position to arm
     // otherwise exit immediately.  This check to be repeated,
     // as state can change at any time.
-    if (ap.using_interlock && motors.get_interlock()){
+    if (ap.using_interlock && ap.motor_interlock_switch) {
         if (display_failure) {
             gcs_send_text(MAV_SEVERITY_CRITICAL,"PreArm: Motor Interlock Enabled");
         }
@@ -73,6 +75,22 @@ bool Copter::pre_arm_checks(bool display_failure)
         return true;
     }
 
+    bool ret = true;
+    ret &= barometer_checks(display_failure);
+    ret &= rc_calibration_checks(display_failure);
+    ret &= compass_checks(display_failure);
+    ret &= gps_checks(display_failure);
+    ret &= fence_checks(display_failure);
+    ret &= ins_checks(display_failure);
+    ret &= board_voltage_checks(display_failure);
+    ret &= parameter_checks(display_failure);
+    ret &= pilot_throttle_checks(display_failure);
+
+    return ret;
+}
+
+bool Copter::rc_calibration_checks(bool display_failure)
+{
     // pre-arm rc checks a prerequisite
     pre_arm_rc_checks();
     if (!ap.pre_arm_rc_check) {
@@ -81,6 +99,11 @@ bool Copter::pre_arm_checks(bool display_failure)
         }
         return false;
     }
+    return true;
+}
+
+bool Copter::barometer_checks(bool display_failure)
+{
     // check Baro
     if ((g.arming_check == ARMING_CHECK_ALL) || (g.arming_check & ARMING_CHECK_BARO)) {
         // barometer health check
@@ -104,7 +127,11 @@ bool Copter::pre_arm_checks(bool display_failure)
             }
         }
     }
+    return true;
+}
 
+bool Copter::compass_checks(bool display_failure)
+{
     // check Compass
     if ((g.arming_check == ARMING_CHECK_ALL) || (g.arming_check & ARMING_CHECK_COMPASS)) {
         //check if compass has calibrated and requires reboot
@@ -159,11 +186,20 @@ bool Copter::pre_arm_checks(bool display_failure)
 
     }
 
+    return true;
+}
+
+bool Copter::gps_checks(bool display_failure)
+{
     // check GPS
     if (!pre_arm_gps_checks(display_failure)) {
         return false;
     }
+    return true;
+}
 
+bool Copter::fence_checks(bool display_failure)
+{
     #if AC_FENCE == ENABLED
     // check fence is initialised
     if (!fence.pre_arm_check()) {
@@ -173,7 +209,11 @@ bool Copter::pre_arm_checks(bool display_failure)
         return false;
     }
     #endif
+    return true;
+}
 
+bool Copter::ins_checks(bool display_failure)
+{
     // check INS
     if ((g.arming_check == ARMING_CHECK_ALL) || (g.arming_check & ARMING_CHECK_INS)) {
         // check accelerometers have been calibrated
@@ -216,6 +256,10 @@ bool Copter::pre_arm_checks(bool display_failure)
                      */
                     threshold *= 2;
                 }
+
+                // EKF is less sensitive to Z-axis error
+                vec_diff.z *= 0.5f;
+
                 if (vec_diff.length() > threshold) {
                     if (display_failure) {
                         gcs_send_text(MAV_SEVERITY_CRITICAL,"PreArm: inconsistent Accelerometers");
@@ -255,6 +299,11 @@ bool Copter::pre_arm_checks(bool display_failure)
             return false;
         }
     }
+    return true;
+}
+
+bool Copter::board_voltage_checks(bool display_failure)
+{
     #if CONFIG_HAL_BOARD != HAL_BOARD_VRBRAIN
     #ifndef CONFIG_ARCH_BOARD_PX4FMU_V1
     // check board voltage
@@ -279,6 +328,11 @@ bool Copter::pre_arm_checks(bool display_failure)
         }
     }
 
+    return true;
+}
+
+bool Copter::parameter_checks(bool display_failure)
+{
     // check various parameter values
     if ((g.arming_check == ARMING_CHECK_ALL) || (g.arming_check & ARMING_CHECK_PARAMETERS)) {
 
@@ -337,8 +391,21 @@ bool Copter::pre_arm_checks(bool display_failure)
         if (!pre_arm_terrain_check(display_failure)) {
             return false;
         }
+
+        // check adsb avoidance failsafe
+        if (failsafe.adsb) {
+            if (display_failure) {
+                gcs_send_text(MAV_SEVERITY_CRITICAL,"PreArm: ADSB threat detected");
+            }
+            return false;
+        }
     }
 
+    return true;
+}
+
+bool Copter::pilot_throttle_checks(bool display_failure)
+{
     // check throttle is above failsafe throttle
     // this is near the bottom to allow other failures to be displayed before checking pilot throttle
     if ((g.arming_check == ARMING_CHECK_ALL) || (g.arming_check & ARMING_CHECK_RC)) {
@@ -598,7 +665,8 @@ bool Copter::arm_checks(bool display_failure, bool arming_from_gcs)
     }
 
     // if we are using motor interlock switch and it's enabled, fail to arm
-    if (ap.using_interlock && motors.get_interlock()){
+    // skip check in Throw mode which takes control of the motor interlock
+    if (ap.using_interlock && motors.get_interlock()) {
         gcs_send_text(MAV_SEVERITY_CRITICAL,"Arm: Motor Interlock Enabled");
         return false;
     }
@@ -677,6 +745,16 @@ bool Copter::arm_checks(bool display_failure, bool arming_from_gcs)
         }
     }
 
+    // check adsb
+    if ((g.arming_check == ARMING_CHECK_ALL) || (g.arming_check & ARMING_CHECK_PARAMETERS)) {
+        if (failsafe.adsb) {
+            if (display_failure) {
+                gcs_send_text(MAV_SEVERITY_CRITICAL,"Arm: ADSB threat detected");
+            }
+            return false;
+        }
+    }
+
     // check throttle
     if ((g.arming_check == ARMING_CHECK_ALL) || (g.arming_check & ARMING_CHECK_RC)) {
         // check throttle is not too low - must be above failsafe throttle
@@ -692,9 +770,9 @@ bool Copter::arm_checks(bool display_failure, bool arming_from_gcs)
         }
 
         // check throttle is not too high - skips checks if arming from GCS in Guided
-        if (!(arming_from_gcs && control_mode == GUIDED)) {
+        if (!(arming_from_gcs && (control_mode == GUIDED || control_mode == GUIDED_NOGPS))) {
             // above top of deadband is too always high
-            if (channel_throttle->get_control_in() > get_takeoff_trigger_throttle()) {
+            if (get_pilot_desired_climb_rate(channel_throttle->get_control_in()) > 0.0f) {
                 if (display_failure) {
                     #if FRAME_CONFIG == HELI_FRAME
                     gcs_send_text(MAV_SEVERITY_CRITICAL,"Arm: Collective too high");

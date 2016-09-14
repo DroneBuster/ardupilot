@@ -72,6 +72,7 @@
 #include <AP_BattMonitor/AP_BattMonitor.h> // Battery monitor library
 #include <AP_OpticalFlow/AP_OpticalFlow.h>     // Optical Flow library
 #include <AP_RSSI/AP_RSSI.h>                   // RSSI Library
+#include <AP_Button/AP_Button.h>
 
 // Configuration
 #include "config.h"
@@ -134,6 +135,7 @@ private:
     Compass compass;
     AP_InertialSensor ins;
     RangeFinder sonar { serial_manager };
+    AP_Button button;
 
     // flight modes convenience array
     AP_Int8	*modes;
@@ -284,8 +286,8 @@ private:
     // Battery Sensors
     AP_BattMonitor battery;
 
-    // Battery Sensors
 #if FRSKY_TELEM_ENABLED == ENABLED
+    // FrSky telemetry support
     AP_Frsky_Telem frsky_telemetry;
 #endif
 
@@ -394,7 +396,6 @@ private:
     void send_location(mavlink_channel_t chan);
     void send_nav_controller_output(mavlink_channel_t chan);
     void send_servo_out(mavlink_channel_t chan);
-    void send_radio_out(mavlink_channel_t chan);
     void send_vfr_hud(mavlink_channel_t chan);
     void send_simstate(mavlink_channel_t chan);
     void send_hwstatus(mavlink_channel_t chan);
@@ -454,6 +455,7 @@ private:
     void reset_control_switch();
     void read_trim_switch();
     void update_events(void);
+    void button_update(void);
     void navigate();
     void set_control_channels(void);
     void init_rc_in();
@@ -494,7 +496,6 @@ private:
     void check_usb_mux(void);
     uint8_t check_digital_pin(uint8_t pin);
     bool should_log(uint32_t mask);
-    void frsky_telemetry_send(void);
     void print_hit_enter();    
     void gcs_send_text_fmt(MAV_SEVERITY severity, const char *fmt, ...);
     void print_mode(AP_HAL::BetterStream *port, uint8_t mode);
@@ -502,13 +503,16 @@ private:
     bool verify_command(const AP_Mission::Mission_Command& cmd);
     bool verify_command_callback(const AP_Mission::Mission_Command& cmd);
     void do_nav_wp(const AP_Mission::Mission_Command& cmd);
+    void do_loiter_unlimited(const AP_Mission::Mission_Command& cmd);
     bool verify_nav_wp(const AP_Mission::Mission_Command& cmd);
+    bool verify_loiter_unlim();
     void do_wait_delay(const AP_Mission::Mission_Command& cmd);
     void do_within_distance(const AP_Mission::Mission_Command& cmd);
     void do_change_speed(const AP_Mission::Mission_Command& cmd);
     void do_set_home(const AP_Mission::Mission_Command& cmd);
     void do_digicam_configure(const AP_Mission::Mission_Command& cmd);
     void do_digicam_control(const AP_Mission::Mission_Command& cmd);
+    void do_set_reverse(const AP_Mission::Mission_Command& cmd);
     void init_capabilities(void);
     void rudder_arm_disarm_check();
     void change_arm_state(void);

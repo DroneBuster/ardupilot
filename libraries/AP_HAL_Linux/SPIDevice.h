@@ -18,19 +18,19 @@
 #pragma once
 
 #include <inttypes.h>
+#include <vector>
 
 #include <AP_HAL/HAL.h>
 #include <AP_HAL/SPIDevice.h>
 
-#include "SPIDriver.h"
-
 namespace Linux {
 
 class SPIBus;
+class SPIDesc;
 
 class SPIDevice : public AP_HAL::SPIDevice {
 public:
-    SPIDevice(SPIBus &bus, SPIDeviceDriver &device_desc);
+    SPIDevice(SPIBus &bus, SPIDesc &device_desc);
 
     virtual ~SPIDevice();
 
@@ -43,22 +43,26 @@ public:
     bool transfer(const uint8_t *send, uint32_t send_len,
                   uint8_t *recv, uint32_t recv_len) override;
 
+    /* See AP_HAL::SPIDevice::transfer_fullduplex() */
+    bool transfer_fullduplex(const uint8_t *send, uint8_t *recv,
+                             uint32_t len) override;
+
     /* See AP_HAL::Device::get_semaphore() */
     AP_HAL::Semaphore *get_semaphore() override;
 
     /* See AP_HAL::Device::register_periodic_callback() */
-    AP_HAL::Device::PeriodicHandle *register_periodic_callback(
-        uint32_t period_usec, AP_HAL::MemberProc) override
-    {
-        return nullptr;
-    }
+    AP_HAL::Device::PeriodicHandle register_periodic_callback(
+        uint32_t period_usec, AP_HAL::Device::PeriodicCb) override;
 
-    /* See AP_HAL::Device::get_fd() */
-    int get_fd() override;
+    /* See AP_HAL::Device::adjust_periodic_callback() */
+    bool adjust_periodic_callback(
+        AP_HAL::Device::PeriodicHandle h, uint32_t period_usec) override;
 
 protected:
     SPIBus &_bus;
-    SPIDeviceDriver &_desc;
+    SPIDesc &_desc;
+    AP_HAL::DigitalSource *_cs;
+    uint32_t _speed;
 
     /*
      * Select device if using userspace CS
@@ -69,6 +73,33 @@ protected:
      * Deselect device if using userspace CS
      */
     void _cs_release();
+};
+
+class SPIDeviceManager : public AP_HAL::SPIDeviceManager {
+public:
+    friend class SPIDevice;
+
+    static SPIDeviceManager *from(AP_HAL::SPIDeviceManager *spi_mgr)
+    {
+        return static_cast<SPIDeviceManager*>(spi_mgr);
+    }
+
+    SPIDeviceManager()
+    {
+        /* Reserve space up-front for 3 buses */
+        _buses.reserve(3);
+    }
+
+    AP_HAL::OwnPtr<AP_HAL::SPIDevice> get_device(const char *name);
+
+protected:
+    void _unregister(SPIBus &b);
+    AP_HAL::OwnPtr<AP_HAL::SPIDevice> _create_device(SPIBus &b, SPIDesc &device_desc) const;
+
+    std::vector<SPIBus*> _buses;
+
+    static const uint8_t _n_device_desc;
+    static SPIDesc _device[];
 };
 
 }

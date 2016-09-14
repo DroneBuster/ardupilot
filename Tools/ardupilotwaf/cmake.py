@@ -173,6 +173,9 @@ cmake_configure_task.run = _cmake_configure_task_run
 class cmake_build_task(Task.Task):
     run_str = '${CMAKE} --build ${CMAKE_BLD_DIR} --target ${CMAKE_TARGET}'
     color = 'BLUE'
+    # the cmake-generated build system is responsible of managing its own
+    # dependencies
+    always_run = True
 
     def exec_command(self, cmd, **kw):
         kw['stdout'] = sys.stdout
@@ -210,10 +213,6 @@ def _cmake_build_task_post_run(self):
         self.set_outputs(node)
     return self.original_post_run()
 cmake_build_task.post_run = _cmake_build_task_post_run
-
-# the cmake-generated build system is responsible of managing its own
-# dependencies
-cmake_build_task = Task.always_run(cmake_build_task)
 
 class CMakeConfig(object):
     '''
@@ -253,9 +252,8 @@ class CMakeConfig(object):
         if self._config_task and self._config_task.cmake_config_sig == sig:
             return self._config_task
 
-        # NOTE: we'll probably need to use the full class name in waf 1.9
-        self._config_task = taskgen.create_task('cmake_configure')
-        self._config_task.cwd = self.bldnode.abspath()
+        self._config_task = taskgen.create_task('cmake_configure_task')
+        self._config_task.cwd = self.bldnode
         self._config_task.cmake = self
         self._config_task.cmake_config_sig = sig
 
@@ -349,8 +347,7 @@ def cmake_build(bld, cmake_config, cmake_target, **kw):
 def create_cmake_build_task(self, cmake_config, cmake_target):
     cmake = get_cmake(cmake_config)
 
-    # NOTE: we'll probably need to use the full class name in waf 1.9
-    tsk = self.create_task('cmake_build')
+    tsk = self.create_task('cmake_build_task')
     tsk.cmake = cmake
     tsk.cmake_target = cmake_target
     tsk.output_patterns = []
@@ -384,13 +381,28 @@ def _check_min_version(cfg):
             cfg.fatal('cmake must be at least at version %s' % minver_str)
         cfg.end_msg(m.group(0))
 
+generators = dict(
+    default=[
+        (['ninja', 'ninja-build'], 'Ninja'),
+        (['make'], 'Unix Makefiles'),
+    ],
+    win32=[
+        (['ninja', 'ninja-build'], 'Ninja'),
+        (['nmake'], 'NMake Makefiles'),
+    ],
+)
+
 def configure(cfg):
     cfg.find_program('cmake')
 
     if cfg.env.CMAKE_MIN_VERSION:
         _check_min_version(cfg)
 
-    cfg.find_program(['ninja', 'ninja-build'], var='NINJA', mandatory=False)
-    cfg.env.CMAKE_GENERATOR_OPTION = ''
-    if cfg.env.NINJA:
-        cfg.env.CMAKE_GENERATOR_OPTION = '-GNinja'
+    l = generators.get(Utils.unversioned_sys_platform(), generators['default'])
+    for names, generator in l:
+        if cfg.find_program(names, mandatory=False):
+            cfg.env.CMAKE_GENERATOR_OPTION = '-G%s' % generator
+            break
+    else:
+        cfg.fatal("cmake: couldn't find a suitable CMake generator. " +
+                  "The ones supported by this Waf tool for this platform are: %s" % ', '.join(g for _, g in l))

@@ -3,8 +3,8 @@
 #include "Copter.h"
 
 /*
- * flight.pde - high level calls to set and update flight modes
- *      logic for individual flight modes is in control_acro.pde, control_stabilize.pde, etc
+ * High level calls to set and update flight modes logic for individual
+ * flight modes is in control_acro.cpp, control_stabilize.cpp, etc
  */
 
 // set_mode - change flight mode and perform any necessary initialisation
@@ -103,6 +103,14 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
             success = throw_init(ignore_checks);
             break;
 
+        case AVOID_ADSB:
+            success = avoid_adsb_init(ignore_checks);
+            break;
+
+        case GUIDED_NOGPS:
+            success = guided_nogps_init(ignore_checks);
+            break;
+
         default:
             success = false;
             break;
@@ -120,12 +128,19 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
         control_mode_reason = reason;
         DataFlash.Log_Write_Mode(control_mode, control_mode_reason);
 
+        adsb.set_is_auto_mode((mode == AUTO) || (mode == RTL) || (mode == GUIDED));
+
 #if AC_FENCE == ENABLED
         // pilot requested flight mode change during a fence breach indicates pilot is attempting to manually recover
         // this flight mode change could be automatic (i.e. fence, battery, GPS or GCS failsafe)
         // but it should be harmless to disable the fence temporarily in these situations as well
         fence.manual_recovery_start();
 #endif
+        
+#if FRSKY_TELEM_ENABLED == ENABLED
+        frsky_telemetry.update_control_mode(control_mode);
+#endif
+        
     }else{
         // Log error that we failed to enter desired flight mode
         Log_Write_Error(ERROR_SUBSYSTEM_FLIGHT_MODE,mode);
@@ -224,6 +239,14 @@ void Copter::update_flight_mode()
             throw_run();
             break;
 
+        case AVOID_ADSB:
+            avoid_adsb_run();
+            break;
+
+        case GUIDED_NOGPS:
+            guided_nogps_run();
+            break;
+
         default:
             break;
     }
@@ -246,10 +269,6 @@ void Copter::exit_mode(control_mode_t old_control_mode, control_mode_t new_contr
 #if MOUNT == ENABLED
         camera_mount.set_mode_to_default();
 #endif  // MOUNT == ENABLED
-    }
-
-    if (old_control_mode == THROW) {
-        throw_exit();
     }
 
     // smooth throttle transition when switching from manual to automatic flight modes
@@ -292,6 +311,7 @@ bool Copter::mode_requires_GPS(control_mode_t mode) {
         case DRIFT:
         case POSHOLD:
         case BRAKE:
+        case AVOID_ADSB:
         case THROW:
             return true;
         default:
@@ -317,7 +337,7 @@ bool Copter::mode_has_manual_throttle(control_mode_t mode) {
 // mode_allows_arming - returns true if vehicle can be armed in the specified mode
 //  arming_from_gcs should be set to true if the arming request comes from the ground station
 bool Copter::mode_allows_arming(control_mode_t mode, bool arming_from_gcs) {
-    if (mode_has_manual_throttle(mode) || mode == LOITER || mode == ALT_HOLD || mode == POSHOLD || mode == DRIFT || mode == SPORT || mode == THROW || (arming_from_gcs && mode == GUIDED)) {
+    if (mode_has_manual_throttle(mode) || mode == LOITER || mode == ALT_HOLD || mode == POSHOLD || mode == DRIFT || mode == SPORT || mode == THROW || (arming_from_gcs && (mode == GUIDED || mode == GUIDED_NOGPS))) {
         return true;
     }
     return false;
@@ -330,6 +350,8 @@ void Copter::notify_flight_mode(control_mode_t mode) {
         case GUIDED:
         case RTL:
         case CIRCLE:
+        case AVOID_ADSB:
+        case GUIDED_NOGPS:
         case LAND:
             // autopilot modes
             AP_Notify::flags.autopilot_mode = true;
@@ -394,6 +416,12 @@ void Copter::print_flight_mode(AP_HAL::BetterStream *port, uint8_t mode)
         break;
     case THROW:
         port->print("THROW");
+        break;
+    case AVOID_ADSB:
+        port->print("AVOID_ADSB");
+        break;
+    case GUIDED_NOGPS:
+        port->print("GUIDED_NOGPS");
         break;
     default:
         port->printf("Mode(%u)", (unsigned)mode);

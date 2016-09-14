@@ -30,9 +30,9 @@ bool AP_Arming_Plane::pre_arm_checks(bool report)
     // Check airspeed sensor
     ret &= AP_Arming::airspeed_checks(report);
 
-    if (plane.g.roll_limit_cd < 300) {
+    if (plane.aparm.roll_limit_cd < 300) {
         if (report) {
-            GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_CRITICAL, "PreArm: LIM_ROLL_CD too small (%u)", plane.g.roll_limit_cd);
+            GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_CRITICAL, "PreArm: LIM_ROLL_CD too small (%u)", plane.aparm.roll_limit_cd);
         }
         ret = false;        
     }
@@ -74,6 +74,24 @@ bool AP_Arming_Plane::pre_arm_checks(bool report)
         }
         ret = false;
     }
+
+    // check adsb avoidance failsafe
+    if (plane.failsafe.adsb) {
+        if (report) {
+            GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_CRITICAL,"PreArm: ADSB threat detected");
+        }
+        ret = false;
+    }
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_PX4
+    if (plane.last_mixer_crc == -1) {
+        if (report) {
+            // if you ever get this error, a reboot is recommended.
+            GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_CRITICAL,"PreArm: Mixer error");
+        }
+        ret = false;
+    }
+#endif // CONFIG_HAL_BOARD
 
     return ret;
 }

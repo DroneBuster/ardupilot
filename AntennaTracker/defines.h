@@ -24,6 +24,16 @@ enum ServoType {
     SERVO_TYPE_CR=2
 };
 
+enum AltSource {
+	ALT_SOURCE_BARO=0,
+	ALT_SOURCE_GPS=1,
+	ALT_SOURCE_GPS_VEH_ONLY=2
+};
+
+//  Filter
+#define SERVO_OUT_FILT_HZ               0.1f
+#define G_Dt                            0.02f
+
 //  Logging parameters
 #define MASK_LOG_ATTITUDE               (1<<0)
 #define MASK_LOG_GPS                    (1<<1)
