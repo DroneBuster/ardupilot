@@ -2328,7 +2328,9 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         mavlink_gas_sensor_board_t packet;
         mavlink_msg_gas_sensor_board_decode(msg, &packet);
         plane.Log_Write_Gas_Sensors(packet.humidity, packet.temp, packet.press, packet.nh3_gas, packet.no2_gas, packet.co_gas, packet.no_gas, packet.so2_gas);
+        break;
     }
+
     case MAVLINK_MSG_ID_SETUP_SIGNING:
         handle_setup_signing(msg);
         break;
