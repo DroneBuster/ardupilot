@@ -473,6 +473,39 @@ void Plane::Log_Write_Home_And_Origin()
     }
 }
 
+struct PACKED log_Gas_Sensors {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    float air_humidity;
+    float air_temp;
+    float air_press;
+    float nh3_gas;
+    float no2_gas;
+    float co_gas;
+    float no_gas;
+    float so2_gas;
+};
+
+void Plane::Log_Write_Gas_Sensors(float hum, float temp, float press, float nh3, float no2,
+        float co, float no, float so2)
+{
+    struct log_Gas_Sensors pkt = {
+        LOG_PACKET_HEADER_INIT(LOG_GAS_SENSORS_MSG),
+        time_us     : AP_HAL::micros64(),
+        air_humidity: hum,
+        air_temp    : temp,
+        air_press   : press,
+        nh3_gas     : nh3,
+        no2_gas     : no2,
+        co_gas      : co,
+        no_gas      : no,
+        so2_gas     : so2
+    };
+
+    DataFlash.WriteBlock(&pkt, sizeof(pkt));
+
+}
+
 const struct LogStructure Plane::log_structure[] = {
     LOG_COMMON_STRUCTURES,
     { LOG_PERFORMANCE_MSG, sizeof(log_Performance), 
@@ -493,6 +526,8 @@ const struct LogStructure Plane::log_structure[] = {
       "STAT", "QBfBBBBBB",  "TimeUS,isFlying,isFlyProb,Armed,Safety,Crash,Still,Stage,Hit" },
     { LOG_QTUN_MSG, sizeof(QuadPlane::log_QControl_Tuning),
       "QTUN", "Qffffehhffff", "TimeUS,AngBst,ThrOut,DAlt,Alt,BarAlt,DCRt,CRt,DVx,DVy,DAx,DAy" },
+    { LOG_GAS_SENSORS_MSG, sizeof(log_Gas_Sensors),
+      "GASS", "Qffffffff", "TimeUS,Humidity,Temp,Pressure,NH3gas,NO2gas,COgas,NOgas,SO2gas" },
 #if OPTFLOW == ENABLED
     { LOG_OPTFLOW_MSG, sizeof(log_Optflow),
       "OF",   "QBffff",   "TimeUS,Qual,flowX,flowY,bodyX,bodyY" },

@@ -860,6 +860,7 @@ private:
     void Log_Write_Baro(void);
     void Log_Write_Airspeed(void);
     void Log_Write_Home_And_Origin();
+    void Log_Write_Gas_Sensors(float hum, float temp, float press, float nh3, float no2, float co, float no, float so2);
     void Log_Write_Vehicle_Startup_Messages();
     void Log_Read(uint16_t log_num, int16_t start_page, int16_t end_page);
     void start_logging();
