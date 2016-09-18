@@ -172,6 +172,10 @@ void AP_OT_Parachute::control_msg(int8_t p1, int8_t p2, int8_t p3, int8_t p4)
     {
         release(2000, 3, 1000);
     }
+	else if(p2 == 2)
+	{
+		release(0, 3, 1000);
+	}
     set_ignition(p3);
     set_parachute_servo(p4);
 
@@ -199,7 +203,7 @@ void AP_OT_Parachute::update(float altitude)
     {
         if ((float)_fs_height > altitude)
         {    
-            release(2000, 3, 1000); // Hard coded maybe params?
+            release(0, 3, 1000); // Hard coded maybe params?
         }
     }
 
