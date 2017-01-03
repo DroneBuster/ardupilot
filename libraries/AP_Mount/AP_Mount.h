@@ -23,6 +23,7 @@
 #include <AP_Common/AP_Common.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_AHRS/AP_AHRS.h>
+#include <AP_RotaryEncoder/AP_RotaryEncoder.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <RC_Channel/RC_Channel.h>
 #include <AP_SerialManager/AP_SerialManager.h>
@@ -67,7 +68,7 @@ public:
     };
 
     // Constructor
-    AP_Mount(const AP_AHRS_TYPE &ahrs, const struct Location &current_loc);
+    AP_Mount(const AP_AHRS_TYPE &ahrs, const struct Location &current_loc, const AP_RotaryEncoder &encoder);
 
     // init - detect and initialise all mounts
     void init(DataFlash_Class *dataflash, const AP_SerialManager& serial_manager);
@@ -140,6 +141,7 @@ protected:
     // private members
     const AP_AHRS_TYPE     &_ahrs;
     const struct Location   &_current_loc;  // reference to the vehicle's current location
+    const AP_RotaryEncoder &_encoder;		// reference to rotary encoder on yaw axis
 
     // frontend parameters
     AP_Int8             _joystick_speed;    // joystick gain

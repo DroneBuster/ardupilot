@@ -393,9 +393,10 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
     AP_GROUPEND
 };
 
-AP_Mount::AP_Mount(const AP_AHRS_TYPE &ahrs, const struct Location &current_loc) :
+AP_Mount::AP_Mount(const AP_AHRS_TYPE &ahrs, const struct Location &current_loc, const AP_RotaryEncoder &encoder) :
     _ahrs(ahrs),
     _current_loc(current_loc),
+	_encoder(encoder),
     _num_instances(0),
     _primary(0)
 {
