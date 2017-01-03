@@ -1251,6 +1251,10 @@ const AP_Param::Info Plane::var_info[] = {
     // @Path: ../libraries/AP_Landing/AP_Landing.cpp
     GOBJECT(landing, "LAND_", AP_Landing),
 
+    // @Group: LAND_
+    // @Path: ../libraries/AP_RotaryEncoder/AP_RotaryEncoder.cpp
+    GOBJECT(rotary_encoder, "ENCDR_", AP_RotaryEncoder),
+
     AP_VAREND
 };
 
@@ -1281,6 +1285,8 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Group: STAT
     // @Path: ../libraries/AP_Stats/AP_Stats.cpp
     AP_SUBGROUPINFO(stats, "STAT", 5, ParametersG2, AP_Stats),
+
+
 
     AP_GROUPEND
 };

@@ -54,6 +54,7 @@
 #include <AP_RPM/AP_RPM.h>
 #include <AP_Stats/AP_Stats.h>     // statistics library
 #include <AP_Beacon/AP_Beacon.h>
+#include <AP_RotaryEncoder/AP_RotaryEncoder.h>
 
 #include <AP_AdvancedFailsafe/AP_AdvancedFailsafe.h>
 #include <APM_Control/APM_Control.h>
@@ -761,8 +762,10 @@ private:
     
     // Camera/Antenna mount tracking and stabilisation stuff
 #if MOUNT == ENABLED
+    AP_RotaryEncoder rotary_encoder;
+
     // current_loc uses the baro/gps soloution for altitude rather than gps only.
-    AP_Mount camera_mount {ahrs, current_loc};
+    AP_Mount camera_mount {ahrs, current_loc,  rotary_encoder};
 #endif
 
     // Arming/Disarming mangement class
@@ -1010,6 +1013,7 @@ private:
     void one_second_loop(void);
     void airspeed_ratio_update(void);
     void update_mount(void);
+    void update_encoder(void);
     void update_trigger(void);    
     void log_perf_info(void);
     void compass_save(void);
