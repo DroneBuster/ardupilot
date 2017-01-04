@@ -70,6 +70,7 @@
 #include <AP_ServoRelayEvents/AP_ServoRelayEvents.h>
 #include <AP_Camera/AP_Camera.h>          // Photo or video camera
 #include <AP_Mount/AP_Mount.h>           // Camera/Antenna mount
+#include <AP_RotaryEncoder/AP_RotaryEncoder.h>
 #include <AP_Airspeed/AP_Airspeed.h>        // needed for AHRS build
 #include <AP_Vehicle/AP_Vehicle.h>         // needed for AHRS build
 #include <AP_InertialNav/AP_InertialNav.h>     // ArduPilot Mega inertial navigation library
@@ -557,6 +558,8 @@ private:
 #if MOUNT == ENABLED
     // current_loc uses the baro/gps soloution for altitude rather than gps only.
     AP_Mount camera_mount;
+
+    AP_RotaryEncoder rotary_encoder;
 #endif
 
     // AC_Fence library to reduce fly-aways
@@ -656,6 +659,7 @@ private:
     void rc_loop();
     void throttle_loop();
     void update_mount();
+    void update_encoder();
     void update_trigger(void);
     void update_batt_compass(void);
     void ten_hz_logging_loop();
