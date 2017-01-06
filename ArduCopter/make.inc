@@ -36,6 +36,7 @@ LIBRARIES += AP_Relay
 LIBRARIES += AP_ServoRelayEvents
 LIBRARIES += AP_Camera
 LIBRARIES += AP_Mount
+LIBRARIES += AP_RotaryEncoder
 LIBRARIES += AP_Airspeed
 LIBRARIES += AP_Vehicle
 LIBRARIES += AP_InertialNav
