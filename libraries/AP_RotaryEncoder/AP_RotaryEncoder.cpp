@@ -45,7 +45,7 @@ const AP_Param::GroupInfo AP_RotaryEncoder::var_info[] = {
     // @Description: Sets encoder offset
     // @Range: -pi +pi
     // @User: Advanced
-    AP_GROUPINFO("OFFSET", 1, AP_RotaryEncoder, _offset, 0.0f),
+    AP_GROUPINFO("OFFSET", 1, AP_RotaryEncoder, _offset, 0),
 
     AP_GROUPEND
 };

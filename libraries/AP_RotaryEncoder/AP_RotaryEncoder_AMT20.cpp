@@ -62,8 +62,8 @@ bool AP_RotaryEncoder_AMT20::_init()
     
     _dev->get_semaphore()->give();
 
-    //100Hz
-    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_RotaryEncoder_AMT20::_timer, bool));
+    //1000Hz
+    _dev->register_periodic_callback(10000, FUNCTOR_BIND_MEMBER(&AP_RotaryEncoder_AMT20::_timer, bool));
     return true;
 }
 
@@ -74,7 +74,7 @@ bool AP_RotaryEncoder_AMT20::_timer() {
         return true;
     }
 
-    if(_state_count > 10) {
+    if(_state_count > 10 && !_cmd_read_angle_sent) {
         _cmd_read_angle();
         _state_count = 0;
     }
@@ -87,50 +87,66 @@ void AP_RotaryEncoder_AMT20::update()
 }
 
 void AP_RotaryEncoder_AMT20::_cmd_read_angle() {
-    if(_cmd_read_angle_sent)
-    {
-        printf("Angle is already sent");
-        return;
-    }
-
     uint8_t angle_cmd = 0x10;
     _dev->transfer(&angle_cmd, 1, nullptr, 0);
-
     _cmd_read_angle_sent = true;
 }
 
 void AP_RotaryEncoder_AMT20::_read_angle() {
-    if(!_data_ready()){
-        _failed_read_count++;
-        if(_failed_read_count > 300) {
-            _cmd_read_angle_sent = false;
+    static int8_t read_count = 0;
+    static bool data_ready = false;
+    if(!data_ready){
+        if(!_data_ready()) {
+            _failed_read_count++;
+            if(_failed_read_count > 40) {
+                _cmd_read_angle_sent = false;
+                _failed_read_count = 0;
+                printf("AP_RotaryEncoder_AMT20: Device not responding\n");
+            }
+            return;
+        } else {
             _failed_read_count = 0;
-            printf("AP_RotaryEncoder_AMT20: Device not responding\n");
+            data_ready = true;
+            return;
         }
+    }
+
+    static uint8_t angle_buf[2] = {0};
+    _dev->transfer(nullptr, 0, &angle_buf[read_count], 1); //call in for loop to have seperate CS signals
+    read_count++;
+    if(read_count < 2) {
         return;
     }
-    uint8_t angle_buf[2];
-    for(uint8_t i = 0; i < 2; i++) {
-        _dev->transfer(nullptr, 0, &angle_buf[i], 1);
-    }
-
+    read_count = 0;
+    data_ready = false;
     _cmd_read_angle_sent = false;
-    uint16_t reading = angle_buf[0] << 8 | angle_buf[1];
-    _last_angle = wrap_PI((M_2PI/4096.0f)*reading);
 
-//    int32_t angle = _last_angle * 1000.0f;
- //   printf("%i\n", angle);
+    uint16_t reading = angle_buf[0] << 8 | angle_buf[1];
+    _last_angle = wrap_PI((M_2PI/4096.0f)*reading - _frontend._offset);
+
+/*    static uint8_t cnt = 0;
+    cnt++;
+    if(cnt > 0) {
+        cnt = 0;
+        int16_t read = _last_angle * 1000.0f;
+        printf("Read: %i %u\n", read, reading);
+    }*/
 }
 
 bool AP_RotaryEncoder_AMT20::_data_ready() {
     if(!_cmd_read_angle_sent) {
         return false;
     }
-    uint8_t cmd_buf;
+    static uint8_t cmd_buf;
     _dev->transfer(nullptr, 0, &cmd_buf, 1);
 
     if(cmd_buf == 0x10){
         return true;
+    }
+    if(cmd_buf != 0xA5) {
+        _cmd_read_angle_sent = false;
+        printf("Dat: %u\n", cmd_buf);
+        return false;
     }
     return false;
 }

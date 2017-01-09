@@ -1043,6 +1043,10 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Path: ../libraries/AP_Beacon/AP_Beacon.cpp
     AP_SUBGROUPINFO(beacon, "BCN", 14, ParametersG2, AP_Beacon),
 
+    // @Group: ENCD
+    // @Path: ../libraries/AP_RotaryEncoder/AP_RotaryEncoder.cpp
+    AP_SUBGROUPINFO(rotary_encoder, "ENCD", 15, ParametersG2, AP_RotaryEncoder),
+
     AP_GROUPEND
 };
 

@@ -57,6 +57,8 @@ public:
     // return number of registered sensors
     uint8_t num_instances(void) const { return _num_sensors; }
 
+    AP_Float _offset;
+
 private:
     // how many drivers do we have?
     uint8_t _num_drivers;
@@ -75,7 +77,6 @@ private:
     } sensors[ROTARY_MAX_INSTANCES];
 
     AP_Int8     _encoder_type; // encoder type chosen by user
-    AP_Float    _offset;       // encoder offset
 
     // when did we last notify the GCS of new pressure reference?
     uint32_t                            _last_notify_ms;

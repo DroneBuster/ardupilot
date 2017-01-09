@@ -342,7 +342,7 @@ void Copter::update_mount()
 void Copter::update_encoder()
 {
 #if MOUNT == ENABLED
-    rotary_encoder.update();
+    g2.rotary_encoder.update();
 #endif
 }
 

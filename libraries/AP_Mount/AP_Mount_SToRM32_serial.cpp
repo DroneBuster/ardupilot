@@ -80,7 +80,7 @@ void AP_Mount_SToRM32_serial::update()
         case MAV_MOUNT_MODE_GPS_POINT:
             if(_frontend._ahrs.get_gps().status() >= AP_GPS::GPS_OK_FIX_2D) {
                 calc_angle_to_location(_state._roi_target, _angle_ef_target_rad, true, true, false);
-                _angle_ef_target_rad.z = _angle_ef_target_rad.z + _frontend._encoder.get_primary_angle() - wrap_PI(ToRad(_current_angle.z/100.0f)) - wrap_PI(_frontend._ahrs.yaw);
+                _angle_ef_target_rad.z = wrap_PI(_angle_ef_target_rad.z + _frontend._encoder.get_primary_angle() - wrap_PI(ToRad(_current_angle.z/100.0f)) - wrap_PI(_frontend._ahrs.yaw));
 
                 resend_now = true;
             }

@@ -220,7 +220,7 @@ void Copter::init_ardupilot()
     // initialise camera mount
     camera_mount.init(&DataFlash, serial_manager);
 
-    rotary_encoder.init();
+    g2.rotary_encoder.init();
 #endif
 
 #if PRECISION_LANDING == ENABLED

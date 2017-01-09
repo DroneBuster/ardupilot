@@ -550,6 +550,8 @@ public:
     // button checking
     AP_Button button;
 
+    AP_RotaryEncoder rotary_encoder;
+
     // vehicle statistics
     AP_Stats stats;
 

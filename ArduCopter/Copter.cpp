@@ -86,7 +86,7 @@ Copter::Copter(void) :
     camera(&relay),
 #endif
 #if MOUNT == ENABLED
-    camera_mount(ahrs, current_loc, rotary_encoder),
+    camera_mount(ahrs, current_loc, g2.rotary_encoder),
 #endif
 #if AC_FENCE == ENABLED
     fence(ahrs, inertial_nav),

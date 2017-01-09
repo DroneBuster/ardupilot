@@ -558,8 +558,6 @@ private:
 #if MOUNT == ENABLED
     // current_loc uses the baro/gps soloution for altitude rather than gps only.
     AP_Mount camera_mount;
-
-    AP_RotaryEncoder rotary_encoder;
 #endif
 
     // AC_Fence library to reduce fly-aways
