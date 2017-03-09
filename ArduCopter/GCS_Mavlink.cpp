@@ -620,7 +620,7 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
         break;
 
     case MSG_ROTARY_ENCODER:
-        mavlink_msg_rotary_encoder_send(chan, copter.g2.rotary_encoder.get_primary_angle());
+        mavlink_msg_rotary_encoder_send(chan, copter.g2.rotary_encoder.get_primary_angle(), copter.g2.rotary_encoder.get_primary_raw_angle());
     }
 
     return true;

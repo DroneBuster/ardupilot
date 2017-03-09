@@ -20,7 +20,7 @@ protected:
     // reference to frontend object
     AP_RotaryEncoder &_frontend;
 
-    void _copy_to_frontend(uint8_t instance, float angle);
+    void _copy_to_frontend(uint8_t instance, float angle, float raw_angle);
 
     // semaphore for access to shared frontend data
     AP_HAL::Semaphore *_sem;    

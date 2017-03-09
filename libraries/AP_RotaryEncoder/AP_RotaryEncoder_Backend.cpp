@@ -12,10 +12,11 @@ AP_RotaryEncoder_Backend::AP_RotaryEncoder_Backend(AP_RotaryEncoder &encoder) :
 /*
   copy latest data to the frontend from a backend
  */
-void AP_RotaryEncoder_Backend::_copy_to_frontend(uint8_t instance, float angle)
+void AP_RotaryEncoder_Backend::_copy_to_frontend(uint8_t instance, float angle, float raw_angle)
 {
     if (instance >= _frontend._num_sensors) {
         return;
     }
     _frontend.sensors[instance].angle = angle;
+    _frontend.sensors[instance].raw_angle = raw_angle;
 }

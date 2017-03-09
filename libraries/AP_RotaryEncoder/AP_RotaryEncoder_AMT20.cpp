@@ -28,9 +28,8 @@ AP_RotaryEncoder_AMT20::AP_RotaryEncoder_AMT20(AP_RotaryEncoder &encoder, AP_HAL
     : AP_RotaryEncoder_Backend(encoder)
     , _dev(std::move(dev))
 {
-    _cmd_read_angle_sent = false;
-    _state_count = 0;
     _last_angle = 0.0f;
+    _state = WAITING_FOR_NEXT_READ;
     _failed_read_count = 0;
 }
 
@@ -63,90 +62,58 @@ bool AP_RotaryEncoder_AMT20::_init()
     _dev->get_semaphore()->give();
 
     //1000Hz
-    _dev->register_periodic_callback(10000, FUNCTOR_BIND_MEMBER(&AP_RotaryEncoder_AMT20::_timer, bool));
+    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_RotaryEncoder_AMT20::_timer, bool));
     return true;
 }
 
 bool AP_RotaryEncoder_AMT20::_timer() {
-    _state_count++;
-    if(_cmd_read_angle_sent) {
-        _read_angle();
-        return true;
+    uint8_t buf[2];
+    switch (_state) {
+        case WAITING_FOR_NEXT_READ:
+            if(_last_time_read_cmd + 10 <= AP_HAL::millis()) {
+                buf[0] = 0x10;
+                _dev->transfer_fullduplex(&buf[0], &buf[1], 1);
+                _last_time_read_cmd = AP_HAL::millis();
+                if(buf[1] == 0x10) _state = READING_DATA;
+                else _state = WAITING_FOR_READ_RESPONSE;
+            }
+            break;
+        case WAITING_FOR_READ_RESPONSE:
+            _dev->transfer(nullptr, 0, buf, 1);
+            if(buf[0] == 0x10){
+                _state = READING_DATA;
+            } else if(buf[0] != 0xA5) {
+                //printf("Dat: %u\n", buf[0]);
+                _failed_read_count++;
+                _state = WAITING_FOR_NEXT_READ;
+            }
+            if(_last_time_read_cmd + 9 <= AP_HAL::millis()) {
+                //printf("Rotary not responding %u %u\n", buf[0], buf[1]);
+                _state = WAITING_FOR_NEXT_READ;
+            }
+            break;
+        case READING_DATA:
+            for(uint8_t i = 0; i < 2; i++) {
+                _dev->transfer(nullptr, 0, &buf[i], 1);
+            }
+            uint16_t reading = buf[0] << 8 | buf[1];
+            _last_angle = wrap_PI((M_2PI/4096.0f)*reading - _frontend._offset);
+            _last_raw_angle = wrap_PI((M_2PI/4096.0f)*reading);
+            _state = WAITING_FOR_NEXT_READ;
+            _failed_read_count = 0;
+            /*static uint8_t cnt = 0;
+            if(++cnt > 5) {
+                cnt = 0;
+                int16_t read = _last_angle * 1000.0f;
+                //printf("Reading: %i\n", read);
+            }*/
+            break;
     }
 
-    if(_state_count > 10 && !_cmd_read_angle_sent) {
-        _cmd_read_angle();
-        _state_count = 0;
-    }
     return true;
 }
 
 void AP_RotaryEncoder_AMT20::update()
 {
-    _copy_to_frontend(_instance, _last_angle);
-}
-
-void AP_RotaryEncoder_AMT20::_cmd_read_angle() {
-    uint8_t angle_cmd = 0x10;
-    _dev->transfer(&angle_cmd, 1, nullptr, 0);
-    _cmd_read_angle_sent = true;
-}
-
-void AP_RotaryEncoder_AMT20::_read_angle() {
-    static int8_t read_count = 0;
-    static bool data_ready = false;
-    if(!data_ready){
-        if(!_data_ready()) {
-            _failed_read_count++;
-            if(_failed_read_count > 40) {
-                _cmd_read_angle_sent = false;
-                _failed_read_count = 0;
-                printf("AP_RotaryEncoder_AMT20: Device not responding\n");
-            }
-            return;
-        } else {
-            _failed_read_count = 0;
-            data_ready = true;
-            return;
-        }
-    }
-
-    static uint8_t angle_buf[2] = {0};
-    _dev->transfer(nullptr, 0, &angle_buf[read_count], 1); //call in for loop to have seperate CS signals
-    read_count++;
-    if(read_count < 2) {
-        return;
-    }
-    read_count = 0;
-    data_ready = false;
-    _cmd_read_angle_sent = false;
-
-    uint16_t reading = angle_buf[0] << 8 | angle_buf[1];
-    _last_angle = wrap_PI((M_2PI/4096.0f)*reading - _frontend._offset);
-
-/*    static uint8_t cnt = 0;
-    cnt++;
-    if(cnt > 0) {
-        cnt = 0;
-        int16_t read = _last_angle * 1000.0f;
-        printf("Read: %i %u\n", read, reading);
-    }*/
-}
-
-bool AP_RotaryEncoder_AMT20::_data_ready() {
-    if(!_cmd_read_angle_sent) {
-        return false;
-    }
-    static uint8_t cmd_buf;
-    _dev->transfer(nullptr, 0, &cmd_buf, 1);
-
-    if(cmd_buf == 0x10){
-        return true;
-    }
-    if(cmd_buf != 0xA5) {
-        _cmd_read_angle_sent = false;
-        printf("Dat: %u\n", cmd_buf);
-        return false;
-    }
-    return false;
+    _copy_to_frontend(_instance, _last_angle, _last_raw_angle);
 }

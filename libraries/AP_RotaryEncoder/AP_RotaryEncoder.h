@@ -40,6 +40,8 @@ public:
 
     float get_primary_angle() const;
 
+    float get_primary_raw_angle() const;
+
     // calibrate the rotary encoder.
     void calibrate(void);
 
@@ -74,6 +76,7 @@ private:
         uint32_t last_update_ms;        // last update time in ms
         bool healthy:1;                 // true if sensor is healthy
         float angle;                    // absolute angle
+        float raw_angle;
     } sensors[ROTARY_MAX_INSTANCES];
 
     AP_Int8     _encoder_type; // encoder type chosen by user

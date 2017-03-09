@@ -123,6 +123,12 @@ float AP_RotaryEncoder::get_primary_angle() const {
     return sensors[_primary].angle;
 }
 
+float AP_RotaryEncoder::get_primary_raw_angle() const {
+    return sensors[_primary].raw_angle;
+}
+
+
+
 
 /* register a new sensor, claiming a sensor slot. If we are out of
    slots it will panic
