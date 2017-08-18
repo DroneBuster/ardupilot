@@ -548,6 +548,11 @@ private:
         uint32_t impact_timer_ms;
     } crash_state;
 
+    struct {
+        bool parachute_fs_en;
+        float parachute_fs_trigger_alt;
+        uint32_t parachute_trigger_ms;
+    } parachute_fs_state { };
     // true if we are in an auto-throttle mode, which means
     // we need to run the speed/height controller
     bool auto_throttle_mode:1;

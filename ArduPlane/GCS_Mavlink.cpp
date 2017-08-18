@@ -1121,10 +1121,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
                     break;
                 case PARACHUTE_RELEASE:
                     // treat as a manual release which performs some additional check of altitude
-                    if (plane.parachute.released()) {
-                        gcs().send_text(MAV_SEVERITY_NOTICE, "Parachute already released");
-                        result = MAV_RESULT_FAILED;
-                    } else if (!plane.parachute.enabled()) {
+                    if (!plane.parachute.enabled()) {
                         gcs().send_text(MAV_SEVERITY_NOTICE, "Parachute not enabled");
                         result = MAV_RESULT_FAILED;
                     } else {
@@ -1132,6 +1129,16 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
                             result = MAV_RESULT_FAILED;
                         }
                     }
+                    break;
+                case 3:
+                    plane.parachute_fs_state.parachute_fs_en = true;
+                    plane.parachute.enabled(true);
+                    gcs().send_text(MAV_SEVERITY_ALERT, "PARA1: Parachute FS enabled");
+                    break;
+                case 4:
+                    plane.parachute_fs_state.parachute_fs_en = false;
+                    plane.parachute.enabled(true);
+                    gcs().send_text(MAV_SEVERITY_ALERT, "PARA2: Parachute FS disabled");
                     break;
                 default:
                     result = MAV_RESULT_FAILED;
