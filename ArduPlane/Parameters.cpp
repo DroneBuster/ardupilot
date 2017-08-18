@@ -949,7 +949,15 @@ const AP_Param::Info Plane::var_info[] = {
     // @Description: If set to a non-zero value then this is an RC input channel number to use for manually releasing the parachute. When this channel goes above 1700 the parachute will be released
     // @User: Advanced
     GSCALAR(parachute_channel,      "CHUTE_CHAN",  0),
+
 #endif
+
+    // @Param: LOST_CHAN
+    // @DisplayName: Lost alarm channel
+    // @Description: If set to a non-zero value then this is an RC input channel number to use for activating buzzer. When this channel goes above 1700 lost allarm will be activated.
+    // @User: Advanced
+    GSCALAR(lost_channel,      "LOST_CHAN",  0),
+
 
     // @Group: RNGFND
     // @Path: ../libraries/AP_RangeFinder/RangeFinder.cpp

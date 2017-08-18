@@ -65,7 +65,15 @@ void Plane::read_control_switch()
         }
     }
 #endif
-    
+
+    if (g.lost_channel > 0) {
+        if (hal.rcin->read(g.lost_channel-1) >= 1700) {
+            AP_Notify::flags.vehicle_lost = true;
+        } else {
+            AP_Notify::flags.vehicle_lost = false;
+        }
+    }
+
 #if HAVE_PX4_MIXER
     if (g.override_channel > 0) {
         // if the user has configured an override channel then check it
