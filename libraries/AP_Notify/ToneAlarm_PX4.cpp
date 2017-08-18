@@ -158,12 +158,22 @@ void ToneAlarm_PX4::update()
         return;
     }
 
+    // lost vehicle tone
+    if (flags.vehicle_lost != AP_Notify::flags.vehicle_lost) {
+        flags.vehicle_lost = AP_Notify::flags.vehicle_lost;
+        if (flags.vehicle_lost) {
+            play_tone(AP_NOTIFY_PX4_TONE_LOUD_VEHICLE_LOST_CTS);
+        } else {
+            stop_cont_tone();
+        }
+    }
+
+    check_cont_tone();
+
     // exit if buzzer is not enabled
     if (pNotify->buzzer_enabled() == false) {
         return;
     }
-
-    check_cont_tone();
     
     if (AP_Notify::flags.powering_off) {
         if (!flags.powering_off) {
@@ -308,16 +318,6 @@ void ToneAlarm_PX4::update()
         if (flags.parachute_release) {
             // parachute release warning tune
             play_tone(AP_NOTIFY_PX4_TONE_LOUD_ATTENTION_NEEDED);
-        }
-    }
-
-    // lost vehicle tone
-    if (flags.vehicle_lost != AP_Notify::flags.vehicle_lost) {
-        flags.vehicle_lost = AP_Notify::flags.vehicle_lost;
-        if (flags.vehicle_lost) {
-            play_tone(AP_NOTIFY_PX4_TONE_LOUD_VEHICLE_LOST_CTS);
-        } else {
-            stop_cont_tone();
         }
     }
 
