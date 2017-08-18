@@ -70,6 +70,9 @@ void AP_Parachute::enabled(bool on_off)
 
     // clear release_time
     _release_time = 0;
+
+    // clear release_initiated. This allows to regain throtle control
+    _release_initiated = false;
 }
 
 /// release - release parachute
