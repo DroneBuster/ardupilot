@@ -15,7 +15,7 @@
 #include "AP_Mount_Backend.h"
 
 #define AP_MOUNT_STORM32_RESEND_MS  1000    // resend angle targets to gimbal once per second
-#define AP_MOUNT_STORM32_SEARCH_MS  60000   // search for gimbal for 1 minute after startup
+#define AP_MOUNT_STORM32_SEARCH_MS  120000   // search for gimbal for 1 minute after startup
 
 class AP_Mount_SToRM32 : public AP_Mount_Backend
 {
