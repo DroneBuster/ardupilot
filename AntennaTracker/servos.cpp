@@ -127,12 +127,12 @@ void Tracker::update_pitch_onoff_servo(float pitch)
 */
 void Tracker::update_pitch_cr_servo(float pitch)
 {
-    int32_t pitch_min_cd = g.pitch_min*100;
-    int32_t pitch_max_cd = g.pitch_max*100;
-    if ((pitch>pitch_min_cd) && (pitch<pitch_max_cd)) {
+//    int32_t pitch_min_cd = g.pitch_min*100;
+//    int32_t pitch_max_cd = g.pitch_max*100;
+//    if ((pitch>pitch_min_cd) && (pitch<pitch_max_cd)) {
         g.pidPitch2Srv.set_input_filter_all(nav_status.angle_error_pitch);
         channel_pitch.set_servo_out(g.pidPitch2Srv.get_pid());
-    }
+//    }
 }
 
 /**
