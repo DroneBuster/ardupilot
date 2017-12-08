@@ -10,6 +10,9 @@ void AP_Mount_Backend::set_angle_targets(float roll, float tilt, float pan)
     _angle_ef_target_rad.y = radians(tilt);
     _angle_ef_target_rad.z = radians(pan);
 
+    _angle_ef_target_rad.z += ToRad(_state._neutral_angles.get().z);
+    _angle_ef_target_rad.y += ToRad(_state._neutral_angles.get().y);
+
     // set the mode to mavlink targeting
     _frontend.set_mode(_instance, MAV_MOUNT_MODE_MAVLINK_TARGETING);
 }
