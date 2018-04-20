@@ -37,6 +37,9 @@
 
 #include <uavcan/equipment/air_data/RawAirData.hpp>
 
+#include <uavcan/equipment/hardpoint/Command.hpp>
+
+
 extern const AP_HAL::HAL& hal;
 
 #define debug_uavcan(level, fmt, args...) do { if ((level) <= AP_BoardConfig_CAN::get_can_debug()) { hal.console->printf(fmt, ##args); }} while (0)
@@ -385,6 +388,7 @@ static void (*airdata_info_st_cb_arr[2])(const uavcan::ReceivedDataStructure<uav
 static uavcan::Publisher<uavcan::equipment::actuator::ArrayCommand>* act_out_array[MAX_NUMBER_OF_CAN_DRIVERS];
 static uavcan::Publisher<uavcan::equipment::esc::RawCommand>* esc_raw[MAX_NUMBER_OF_CAN_DRIVERS];
 static uavcan::Publisher<uavcan::equipment::indication::LightsCommand>* rgb_led[MAX_NUMBER_OF_CAN_DRIVERS];
+static uavcan::Publisher<uavcan::equipment::hardpoint::Command>* gimbal_reatract;
 
 AP_UAVCAN::AP_UAVCAN() :
     _node_allocator(
@@ -575,6 +579,10 @@ bool AP_UAVCAN::try_init(void)
 
                     _led_conf.devices_count = 0;
 
+                    gimbal_reatract = new uavcan::Publisher<uavcan::equipment::hardpoint::Command>(*node);
+                    gimbal_reatract->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
+                    gimbal_reatract->setPriority(uavcan::TransferPriority::OneLowerThanHighest);
+
                     /*
                      * Informing other nodes that we're ready to work.
                      * Default mode is INITIALIZING.
@@ -596,6 +604,13 @@ bool AP_UAVCAN::try_init(void)
     }
 
     return false;
+}
+
+void AP_UAVCAN::send_gimbale_reatract(bool reatract) {
+    uavcan::equipment::hardpoint::Command msg;
+    msg.hardpoint_id = 220;
+    msg.command = reatract;
+    gimbal_reatract->broadcast(msg);
 }
 
 void AP_UAVCAN::SRV_sem_take()

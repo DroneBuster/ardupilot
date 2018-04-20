@@ -151,6 +151,8 @@ public:
     void SRV_send_servos();
     void SRV_send_esc();
 
+    static void send_gimbale_reatract(bool reatract);
+
 private:
     // ------------------------- GPS
     // 255 - means free node
