@@ -98,6 +98,8 @@ public:
     bool rc_out_sem_take();
     void rc_out_sem_give();
 
+    static void send_gimbale_reatract(bool reatract);
+
 private:
     // ------------------------- GPS
     // 255 - means free node
