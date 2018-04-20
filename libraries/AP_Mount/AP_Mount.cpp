@@ -8,6 +8,8 @@
 #include "AP_Mount_SToRM32.h"
 #include "AP_Mount_SToRM32_serial.h"
 
+#include <AP_UAVCAN/AP_UAVCAN.h>
+
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Param: _DEFLT_MODE
     // @DisplayName: Mount default operating mode
@@ -587,6 +589,11 @@ void AP_Mount::control(uint8_t instance, int32_t pitch_or_lat, int32_t roll_or_l
 {
     if (instance >= AP_MOUNT_MAX_INSTANCES || _backends[instance] == nullptr) {
         return;
+    }
+    if(mount_mode == MAV_MOUNT_MODE_RETRACT) {
+        AP_UAVCAN::send_gimbale_reatract(true);
+    } else {
+        AP_UAVCAN::send_gimbale_reatract(false);
     }
 
     // send message to backend
