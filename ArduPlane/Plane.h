@@ -928,6 +928,7 @@ private:
     void exit_mode(enum FlightMode mode);
     void check_long_failsafe();
     void check_short_failsafe();
+    void check_mount_reatract();
     void startup_INS_ground(void);
     void update_notify();
     bool should_log(uint32_t mask);

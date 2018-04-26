@@ -22,6 +22,7 @@ void Plane::parachute_check()
 */
 void Plane::parachute_release()
 {
+    camera_mount.control(0, 0, 0, 0, MAV_MOUNT_MODE_RETRACT);
     if (parachute.release_in_progress()) {
         return;
     }
