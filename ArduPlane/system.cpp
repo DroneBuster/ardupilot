@@ -625,7 +625,7 @@ void Plane::check_short_failsafe()
 
 void Plane::check_mount_reatract()
 {
-    if(failsafe.state == FAILSAFE_LONG || failsafe.state == FAILSAFE_GCS) {
+    if(failsafe.state == FAILSAFE_GCS) {
         camera_mount.control(0, 0, 0, 0, MAV_MOUNT_MODE_RETRACT);
     }
     if(parachute.alt_min() > relative_ground_altitude(false) && plane.is_flying())
