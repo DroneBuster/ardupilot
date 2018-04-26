@@ -8,7 +8,9 @@
 #include "AP_Mount_SToRM32.h"
 #include "AP_Mount_SToRM32_serial.h"
 
+#if HAL_WITH_UAVCAN
 #include <AP_UAVCAN/AP_UAVCAN.h>
+#endif
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Param: _DEFLT_MODE
@@ -590,11 +592,13 @@ void AP_Mount::control(uint8_t instance, int32_t pitch_or_lat, int32_t roll_or_l
     if (instance >= AP_MOUNT_MAX_INSTANCES || _backends[instance] == nullptr) {
         return;
     }
+#if HAL_WITH_UAVCAN
     if(mount_mode == MAV_MOUNT_MODE_RETRACT) {
         AP_UAVCAN::send_gimbale_reatract(true);
     } else {
         AP_UAVCAN::send_gimbale_reatract(false);
     }
+#endif
 
     // send message to backend
     _backends[instance]->control(pitch_or_lat, roll_or_lon, yaw_or_alt, mount_mode);
