@@ -1,3 +1,30 @@
+Release 3.8.5, 25th April 2018
+------------------------------
+
+This release includes small bug fixes and one safety fix. The changes
+are:
+
+ - fixed an issue where the external safety button can activate in
+   flight on some boards, causing them to crash. A new parameter
+   BRD_SAFETYOPTION is added which controls the behaviour of the
+   safety button. The default is to de-activate the safety button when
+   armed.
+
+ - fixed default orientation of ICM-20948 compass for Here GPS
+
+ - added support for dual airspeed sensors
+
+ - added support for the SDP33 airspeed sensor. This is still
+   considered experimental. There are reports of it underestimating
+   the aircrafts speed at higher altitudes.
+
+ - add support for the MS5525 airspeed sensor on multiple I2C
+   addresses. Two new values of the ARSDP_TYPE are introduced (4 and
+   5) for specific I2C addresses. This allows you to deconflict the
+   MS5525 from a MS5611 barometer on the same bus.
+
+
+
 Release 3.8.4, 9th January 2018
 -------------------------------
 

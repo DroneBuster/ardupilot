@@ -39,11 +39,6 @@
 #include "AP_Baro_UAVCAN.h"
 #endif
 
-#define C_TO_KELVIN 273.15f
-// Gas Constant is from Aerodynamics for Engineering Students, Third Edition, E.L.Houghton and N.B.Carruthers
-#define ISA_GAS_CONSTANT 287.26f
-#define ISA_LAPSE_RATE 0.0065f
-
 #define INTERNAL_TEMPERATURE_CLAMP 35.0f
 
 
@@ -135,11 +130,16 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     AP_GROUPEND
 };
 
+// singleton instance
+AP_Baro *AP_Baro::_instance;
+
 /*
   AP_Baro constructor
  */
 AP_Baro::AP_Baro()
 {
+    _instance = this;
+    
     AP_Param::setup_object_defaults(this, var_info);
 }
 
@@ -277,7 +277,7 @@ float AP_Baro::get_EAS2TAS(void)
     // provides a more consistent reading then trying to estimate a complete
     // ISA model atmosphere
     float tempK = get_ground_temperature() + C_TO_KELVIN - ISA_LAPSE_RATE * altitude;
-    _EAS2TAS = safe_sqrt(1.225f / ((float)get_pressure() / (ISA_GAS_CONSTANT * tempK)));
+    _EAS2TAS = safe_sqrt(AIR_DENSITY_SEA_LEVEL / ((float)get_pressure() / (ISA_GAS_CONSTANT * tempK)));
     _last_altitude_EAS2TAS = altitude;
     return _EAS2TAS;
 }

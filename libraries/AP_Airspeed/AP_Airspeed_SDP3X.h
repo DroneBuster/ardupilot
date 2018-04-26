@@ -25,14 +25,18 @@
 #include <utility>
 
 #include "AP_Airspeed_Backend.h"
-#include <AP_HAL/I2CDevice.h>
+#include "AP_Airspeed.h"
 
-class AP_Airspeed_MS4525 : public AP_Airspeed_Backend
+/*
+ * Thanks to PX4 for registers definitions
+ */
+
+class AP_Airspeed_SDP3X : public AP_Airspeed_Backend
 {
 public:
-    AP_Airspeed_MS4525(AP_Airspeed &frontend, uint8_t _instance);
-    ~AP_Airspeed_MS4525(void) {}
-    
+    AP_Airspeed_SDP3X(AP_Airspeed &frontend, uint8_t _instance);
+    ~AP_Airspeed_SDP3X(void) {}
+
     // probe and initialise the sensor
     bool init() override;
 
@@ -43,20 +47,21 @@ public:
     bool get_temperature(float &temperature) override;
 
 private:
-    void _measure();
-    void _collect();
     void _timer();
-    void _voltage_correction(float &diff_press_pa, float &temperature);
-    float _get_pressure(int16_t dp_raw) const;
-    float _get_temperature(int16_t dT_raw) const;
+    bool _send_command(uint16_t cmd);
+    bool _crc(const uint8_t data[], unsigned size, uint8_t checksum);
+    float _correct_pressure(float press);
 
-    float _temp_sum;
-    float _press_sum;
-    uint32_t _temp_count;
-    uint32_t _press_count;
+    float _temp;
+    float _press;
     float _temperature;
     float _pressure;
+    uint16_t _temp_count;
+    uint16_t _press_count;
+    float _temp_sum;
+    float _press_sum;
     uint32_t _last_sample_time_ms;
-    uint32_t _measurement_started_ms;
+    uint16_t _scale;
+
     AP_HAL::OwnPtr<AP_HAL::I2CDevice> _dev;
 };
