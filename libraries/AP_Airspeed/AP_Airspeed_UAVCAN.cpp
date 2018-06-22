@@ -105,6 +105,9 @@ bool AP_Airspeed_UAVCAN::register_uavcan_airspeed(uint8_t mgr, uint8_t node)
 // read the airspeed sensor
 bool AP_Airspeed_UAVCAN::get_differential_pressure(float &pressure)
 {
+    if(isnan(_pressure)) {
+        return false;
+    }
     if((AP_HAL::millis() - _last_message_time_ms) > 100) {
         return false;
     }
@@ -118,6 +121,9 @@ bool AP_Airspeed_UAVCAN::get_differential_pressure(float &pressure)
 
 bool AP_Airspeed_UAVCAN::get_temperature(float &temperature)
 {
+    if(isnan(_temperature)) {
+        return false;
+    }
     if((AP_HAL::millis() - _last_message_time_ms) > 100) {
         return false;
     }
