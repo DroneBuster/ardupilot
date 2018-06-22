@@ -105,6 +105,9 @@ bool AP_Airspeed_UAVCAN::register_uavcan_airspeed(uint8_t mgr, uint8_t node)
 // read the airspeed sensor
 bool AP_Airspeed_UAVCAN::get_differential_pressure(float &pressure)
 {
+    if((AP_HAL::millis() - _last_message_time_ms) > 100) {
+        return false;
+    }
     if (!_sem_airspeed->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         return false;
     }
@@ -115,6 +118,9 @@ bool AP_Airspeed_UAVCAN::get_differential_pressure(float &pressure)
 
 bool AP_Airspeed_UAVCAN::get_temperature(float &temperature)
 {
+    if((AP_HAL::millis() - _last_message_time_ms) > 100) {
+        return false;
+    }
     if (!_sem_airspeed->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         return false;
     }
@@ -131,6 +137,7 @@ void AP_Airspeed_UAVCAN::handle_airspeed_msg(float pressure, float temperature)
     _pressure = pressure;
     _temperature = temperature - 273.15f;
     _sem_airspeed->give();
+    _last_message_time_ms = AP_HAL::millis();
 }
 
 #endif // HAL_WITH_UAVCAN

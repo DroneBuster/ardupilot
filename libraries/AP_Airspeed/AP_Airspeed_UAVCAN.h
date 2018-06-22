@@ -32,4 +32,5 @@ private:
     uint8_t _manager;
     float _pressure; // Pascal
     float _temperature; // Kelvin
+    uint32_t _last_message_time_ms;
 };
