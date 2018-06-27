@@ -998,7 +998,7 @@ void AP_UAVCAN::do_cyclic(void)
     }
 
     if (fix_out_sem_take()) {
-        uint32_t now = AP_HAL::micros();
+        uint32_t now = AP_HAL::millis();
         if (fix_out_array[_uavcan_i] != nullptr &&
                 _broadcast_fix_rate != 0 &&
                 (now - fix_out_send_last_ms) >= fix_out_send_delta_ms) {
@@ -1018,14 +1018,15 @@ void AP_UAVCAN::do_cyclic(void)
         fix_out_sem_give();
     }
 
-    uint32_t now = AP_HAL::micros();
-    if (att_out_sem_take() &&
-            attitude_out_array[_uavcan_i] != nullptr &&
-            _broadcast_att_rate != 0 &&
-            (now - att_out_send_last_ms) >= att_out_send_delta_ms) {
-        att_out_send_last_ms = now;
-        att_out_send_delta_ms = 1000U / (uint16_t)_broadcast_att_rate;
-        attitude_out_array[_uavcan_i]->broadcast(_att_state);
+    uint32_t now = AP_HAL::millis();
+    if (att_out_sem_take()) {
+        if(attitude_out_array[_uavcan_i] != nullptr &&
+                _broadcast_att_rate != 0 &&
+                (now - att_out_send_last_ms) >= att_out_send_delta_ms) {
+            att_out_send_last_ms = now;
+            att_out_send_delta_ms = 1000U / (uint16_t)_broadcast_att_rate;
+            attitude_out_array[_uavcan_i]->broadcast(_att_state);
+        }
 
         att_out_sem_give();
     }
