@@ -106,27 +106,6 @@ const AP_Param::GroupInfo AP_UAVCAN::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("ATT_R", 7, AP_UAVCAN, _broadcast_att_rate, 0),
 
-    // @Param: FIX_R
-    // @DisplayName: UAVCAN GNSS Fix broadcast rate
-    // @Description: UAVCAN GNSS Fix broadcast rate in times per second. 0 - disable broadcast.
-    // @Range: 0 20
-    // @User: Advanced
-    AP_GROUPINFO("FIX_R", 4, AP_UAVCAN, _broadcast_fix_rate, 0),
-
-    // @Param: FIX2_R
-    // @DisplayName: UAVCAN GNSS Fix2 broadcast rate
-    // @Description: UAVCAN GNSS Fix2 broadcast rate in times per second. 0 - disable broadcast.
-    // @Range: 0 20
-    // @User: Advanced
-    AP_GROUPINFO("FIX2_R", 5, AP_UAVCAN, _broadcast_fix2_rate, 0),
-
-    // @Param: ATT_R
-    // @DisplayName: UAVCAN attitude broadcast rate
-    // @Description: UAVCAN attitude broadcast rate in times per second. 0 - disable broadcast.
-    // @Range: 0 20
-    // @User: Advanced
-    AP_GROUPINFO("ATT_R", 6, AP_UAVCAN, _broadcast_att_rate, 0),
-
     AP_GROUPEND
 };
 
