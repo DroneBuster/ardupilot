@@ -278,10 +278,10 @@ void AP_UAVCAN::UAVCAN_AHRS_update(const AP_AHRS_NavEKF &ahrs)
         Quaternion qt;
         const Matrix3f rot = ahrs.get_rotation_body_to_ned();
         qt.from_rotation_matrix(rot);
-        _att_state.orientation_xyzw[0] = qt.q1;
-        _att_state.orientation_xyzw[1] = qt.q2;
-        _att_state.orientation_xyzw[2] = qt.q3;
-        _att_state.orientation_xyzw[3] = qt.q4;
+        _att_state.orientation_xyzw[0] = qt.q2;
+        _att_state.orientation_xyzw[1] = qt.q3;
+        _att_state.orientation_xyzw[2] = qt.q4;
+        _att_state.orientation_xyzw[3] = qt.q1;
 
         // TODO: extract from EKF
         //_att_state.orientation_covariance
