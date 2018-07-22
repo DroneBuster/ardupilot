@@ -87,6 +87,11 @@ const AP_Param::GroupInfo AP_UAVCAN::var_info[] = {
     AP_GROUPEND
 };
 
+static struct {
+    bool up;
+    bool prev;
+} _reatract_conf;
+
 // this is the timeout in milliseconds for periodic message types. We
 // set this to 1 to minimise resend of stale msgs
 #define CAN_PERIODIC_TX_TIMEOUT_MS 2
@@ -582,6 +587,8 @@ bool AP_UAVCAN::try_init(void)
                     gimbal_reatract = new uavcan::Publisher<uavcan::equipment::hardpoint::Command>(*node);
                     gimbal_reatract->setTxTimeout(uavcan::MonotonicDuration::fromMSec(20));
                     gimbal_reatract->setPriority(uavcan::TransferPriority::OneLowerThanHighest);
+                    _reatract_conf.up = true;
+                    _reatract_conf.prev = false; //This ensures that first message is sent
 
                     /*
                      * Informing other nodes that we're ready to work.
@@ -606,11 +613,18 @@ bool AP_UAVCAN::try_init(void)
     return false;
 }
 
+void AP_UAVCAN::update_gimbal_reatract() {
+    if(_reatract_conf.up != _reatract_conf.prev) {
+        uavcan::equipment::hardpoint::Command msg;
+        _reatract_conf.prev = _reatract_conf.up;
+        msg.hardpoint_id = 220;
+        msg.command = _reatract_conf.up;
+        gimbal_reatract->broadcast(msg);
+    }
+}
+
 void AP_UAVCAN::send_gimbale_reatract(bool reatract) {
-    uavcan::equipment::hardpoint::Command msg;
-    msg.hardpoint_id = 220;
-    msg.command = reatract;
-    gimbal_reatract->broadcast(msg);
+    _reatract_conf.up = reatract;
 }
 
 void AP_UAVCAN::SRV_sem_take()
@@ -767,6 +781,8 @@ void AP_UAVCAN::do_cyclic(void)
         led_out_send();
         led_out_sem_give();
     }
+
+    update_gimbal_reatract();
 
 }
 

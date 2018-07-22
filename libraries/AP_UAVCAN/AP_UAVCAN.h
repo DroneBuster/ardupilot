@@ -225,6 +225,11 @@ private:
 
     AP_HAL::Semaphore *SRV_sem;
     AP_HAL::Semaphore *_led_out_sem;
+    AP_HAL::Semaphore *_mount_retract_sem;
+
+    bool retract_out_sem_take();
+    void retract_out_sem_give();
+    void update_gimbal_reatract();
 
     class SystemClock: public uavcan::ISystemClock, uavcan::Noncopyable {
         SystemClock()
