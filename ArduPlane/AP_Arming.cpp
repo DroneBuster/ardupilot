@@ -90,6 +90,13 @@ bool AP_Arming_Plane::pre_arm_checks(bool report)
         ret = false;
     }
 
+    if (plane.parachute.release_initiated()) {
+        if (report) {
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "PreArm: Parachute released. Reset plane");
+        }
+        ret = false;
+    }
+
 #if HAVE_PX4_MIXER
     if (plane.last_mixer_crc == -1) {
         if (report) {
