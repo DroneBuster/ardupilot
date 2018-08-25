@@ -967,6 +967,16 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 #endif
             break;
 
+#if MOUNT == ENABLED
+        case MAV_CMD_DO_MOUNT_CONFIGURE:
+            plane.camera_mount.configure((MAV_MOUNT_MODE)packet.param1,
+                    (uint8_t)packet.param2, (uint8_t)packet.param3, (uint8_t)packet.param4,
+                    (enum AP_Mount::ControlMode)packet.param5, (enum AP_Mount::ControlMode)packet.param6,
+                    (enum AP_Mount::ControlMode)packet.param7);
+            result = MAV_RESULT_ACCEPTED;
+        break;
+#endif
+
         case MAV_CMD_MISSION_START:
             plane.set_mode(AUTO, MODE_REASON_GCS_COMMAND);
             result = MAV_RESULT_ACCEPTED;
