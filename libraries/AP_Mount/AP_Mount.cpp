@@ -7,6 +7,9 @@
 #include "AP_Mount_Alexmos.h"
 #include "AP_Mount_SToRM32.h"
 #include "AP_Mount_SToRM32_serial.h"
+#if HAL_WITH_UAVCAN
+#include "AP_Mount_UAVCAN.h"
+#endif
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Param: _DEFLT_MODE
@@ -462,6 +465,11 @@ void AP_Mount::init(const AP_SerialManager& serial_manager)
         } else if (mount_type == Mount_Type_SToRM32_serial) {
             _backends[instance] = new AP_Mount_SToRM32_serial(*this, state[instance], instance);
             _num_instances++;
+#if HAL_WITH_UAVCAN
+        } else if (mount_type == Mount_Type_UAVCAN) {
+            _backends[instance] = new AP_Mount_UAVCAN(*this, state[instance], instance);
+            _num_instances++;
+#endif
         }
 
         // init new instance
@@ -591,6 +599,16 @@ void AP_Mount::control(uint8_t instance, int32_t pitch_or_lat, int32_t roll_or_l
 
     // send message to backend
     _backends[instance]->control(pitch_or_lat, roll_or_lon, yaw_or_alt, mount_mode);
+}
+
+void AP_Mount::configure(uint8_t instance, enum MAV_MOUNT_MODE mount_mode, uint8_t stab_roll, uint8_t stab_pitch, uint8_t stab_yaw, enum ControlMode roll_mode, enum ControlMode pitch_mode, enum ControlMode yaw_mode)
+{
+    if(instance >= AP_MOUNT_MAX_INSTANCES || _backends[instance] == nullptr) {
+        return;
+    }
+
+    // send message to backend
+    _backends[instance]->configure(mount_mode, stab_roll, stab_pitch, stab_yaw, roll_mode, pitch_mode, yaw_mode);
 }
 
 /// Return mount status information

@@ -38,6 +38,7 @@ class AP_Mount_SoloGimbal;
 class AP_Mount_Alexmos;
 class AP_Mount_SToRM32;
 class AP_Mount_SToRM32_serial;
+class AP_Mount_UAVCAN;
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -53,6 +54,9 @@ class AP_Mount
     friend class AP_Mount_Alexmos;
     friend class AP_Mount_SToRM32;
     friend class AP_Mount_SToRM32_serial;
+#if HAL_WITH_UAVCAN
+    friend class AP_Mount_UAVCAN;
+#endif
 
 public:
     AP_Mount(const AP_AHRS_TYPE &ahrs, const struct Location &current_loc);
@@ -69,7 +73,14 @@ public:
         Mount_Type_SoloGimbal = 2,      /// Solo's gimbal
         Mount_Type_Alexmos = 3,         /// Alexmos mount
         Mount_Type_SToRM32 = 4,         /// SToRM32 mount using MAVLink protocol
-        Mount_Type_SToRM32_serial = 5   /// SToRM32 mount using custom serial protocol
+        Mount_Type_SToRM32_serial = 5,  /// SToRM32 mount using custom serial protocol
+        Mount_Type_UAVCAN = 6           /// UAVCAN mount
+    };
+
+    enum ControlMode {
+        Control_Angle_Body_Frame = 0,
+        Control_Angular_Rate = 1,
+        Control_Angle_Absolute_Frame = 2
     };
 
     // init - detect and initialise all mounts
@@ -114,6 +125,10 @@ public:
     // control - control the mount
     void control(int32_t pitch_or_lat, int32_t roll_or_lon, int32_t yaw_or_alt, enum MAV_MOUNT_MODE mount_mode) { control(_primary, pitch_or_lat, roll_or_lon, yaw_or_alt, mount_mode); }
     void control(uint8_t instance, int32_t pitch_or_lat, int32_t roll_or_lon, int32_t yaw_or_alt, enum MAV_MOUNT_MODE mount_mode);
+
+    // configure - configure the mount
+    void configure(enum MAV_MOUNT_MODE mount_mode, uint8_t stab_roll, uint8_t stab_pitch, uint8_t stab_yaw, enum ControlMode roll_mode, enum ControlMode pitch_mode, enum ControlMode yaw_mode) { configure(_primary, mount_mode, stab_roll, stab_pitch, stab_yaw, roll_mode, pitch_mode, yaw_mode); }
+    void configure(uint8_t instance, enum MAV_MOUNT_MODE mount_mode, uint8_t stab_roll, uint8_t stab_pitch, uint8_t stab_yaw, enum ControlMode roll_mode, enum ControlMode pitch_mode, enum ControlMode yaw_mode);
 
     // configure_msg - process MOUNT_CONFIGURE messages received from GCS
     void configure_msg(mavlink_message_t* msg) { configure_msg(_primary, msg); }

@@ -80,6 +80,11 @@ void AP_Mount_Backend::control(int32_t pitch_or_lat, int32_t roll_or_lon, int32_
     }
 }
 
+void AP_Mount_Backend::configure(enum MAV_MOUNT_MODE mount_mode, uint8_t stab_roll, uint8_t stab_pitch, uint8_t stab_yaw, enum AP_Mount::ControlMode roll_mode, enum AP_Mount::ControlMode pitch_mode, enum AP_Mount::ControlMode yaw_mode)
+{
+    _frontend.set_mode(_instance, mount_mode);
+}
+
 // update_targets_from_rc - updates angle targets using input from receiver
 void AP_Mount_Backend::update_targets_from_rc()
 {
