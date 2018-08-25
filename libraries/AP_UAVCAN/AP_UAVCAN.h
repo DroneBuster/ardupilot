@@ -16,6 +16,7 @@
 #include <AP_Baro/AP_Baro_Backend.h>
 #include <AP_Compass/AP_Compass.h>
 #include <AP_BattMonitor/AP_BattMonitor_Backend.h>
+#include <AP_Mount/AP_Mount.h>
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
@@ -48,6 +49,8 @@
 
 #define AP_UAVCAN_MAX_LED_DEVICES 4
 #define AP_UAVCAN_LED_DELAY_MILLISECONDS 50
+
+#define AP_UAVCAN_MOUNT_DELAY_MILLISECONDS 50
 
 #define AP_UAVCAN_BROADCAST_POSITION_FIX    1
 #define AP_UAVCAN_BROADCAST_POSITION_FIX2   2
@@ -132,6 +135,11 @@ public:
     bool led_out_sem_take();
     void led_out_sem_give();
     void led_out_send();
+
+    // synchronization for mount output
+    bool mount_out_sem_take();
+    void mount_out_sem_give();
+    void mount_out_send();
 
     // output from do_cyclic
     void SRV_send_servos();
@@ -219,10 +227,20 @@ private:
         uint64_t last_update;
     } _led_conf;
 
+    struct {
+        Location poi;
+        Vector3f target_angles;
+        bool geo_poi_mode;
+        bool broadcast_enabled;
+        bool new_data;
+        enum AP_Mount::ControlMode control_mode;
+    } _mount_conf;
+
     AP_HAL::Semaphore *SRV_sem;
     AP_HAL::Semaphore *_fix_out_sem;
     AP_HAL::Semaphore *_att_out_sem;
     AP_HAL::Semaphore *_led_out_sem;
+    AP_HAL::Semaphore *_mount_out_sem;
 
     class SystemClock: public uavcan::ISystemClock, uavcan::Noncopyable {
         SystemClock()
@@ -305,6 +323,7 @@ public:
     void SRV_write(uint16_t pulse_len, uint8_t ch);
     void SRV_push_servos(void);
     bool led_write(uint8_t led_index, uint8_t red, uint8_t green, uint8_t blue);
+    void mount_write(bool geo_poi_mode, Vector3f angles, Location poi, enum AP_Mount::ControlMode mode);
 
     void set_parent_can_mgr(AP_HAL::CANManager* parent_can_mgr)
     {
