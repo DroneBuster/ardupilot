@@ -21,6 +21,8 @@
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 #include <uavcan/equipment/indication/RGB565.hpp>
 
+#include <AP_AHRS/AP_AHRS.h>
+
 #ifndef UAVCAN_NODE_POOL_SIZE
 #define UAVCAN_NODE_POOL_SIZE 8192
 #endif
@@ -48,6 +50,10 @@
 
 #define AP_UAVCAN_MAX_LED_DEVICES 4
 #define AP_UAVCAN_LED_DELAY_MILLISECONDS 50
+
+#define AP_UAVCAN_BROADCAST_POSITION_FIX    1
+#define AP_UAVCAN_BROADCAST_POSITION_FIX2   2
+#define AP_UAVCAN_BROADCAST_ATTITUDE        4
 
 class AP_UAVCAN {
 public:
@@ -153,6 +159,18 @@ public:
 
     static void send_gimbale_reatract(bool reatract);
 
+    // synchronization for GNSS fix output
+    bool fix_out_sem_take();
+    void fix_out_sem_give();
+
+    // synchronization for attitude output
+    bool att_out_sem_take();
+    void att_out_sem_give();
+
+    bool need_AHRS_update(void) {
+        return (_broadcast_fix_rate > 0 || _broadcast_fix2_rate > 0 || _broadcast_att_rate > 0);
+    }
+
 private:
     // ------------------------- GPS
     // 255 - means free node
@@ -197,6 +215,13 @@ private:
     uint8_t _airspeed_listener_to_node[AP_UAVCAN_MAX_LISTENERS];
     AP_Airspeed_Backend* _airspeed_listeners[AP_UAVCAN_MAX_LISTENERS];
 
+    uint32_t fix_out_send_last_ms;
+    uint32_t fix_out_send_delta_ms;
+    uint32_t fix2_out_send_last_ms;
+    uint32_t fix2_out_send_delta_ms;
+    uint32_t att_out_send_last_ms;
+    uint32_t att_out_send_delta_ms;
+
     struct {
         uint16_t pulse;
         uint16_t safety_pulse;
@@ -224,6 +249,8 @@ private:
     } _led_conf;
 
     AP_HAL::Semaphore *SRV_sem;
+    AP_HAL::Semaphore *_fix_out_sem;
+    AP_HAL::Semaphore *_att_out_sem;
     AP_HAL::Semaphore *_led_out_sem;
     AP_HAL::Semaphore *_mount_retract_sem;
 
@@ -296,6 +323,10 @@ private:
 
     AP_HAL::CANManager* _parent_can_mgr;
 
+    AP_Int16 _broadcast_fix_rate;
+    AP_Int16 _broadcast_fix2_rate;
+    AP_Int16 _broadcast_att_rate;
+
 public:
     void do_cyclic(void);
     bool try_init(void);
@@ -313,6 +344,8 @@ public:
     {
         _parent_can_mgr = parent_can_mgr;
     }
+
+    void UAVCAN_AHRS_update(const AP_AHRS_NavEKF &ahrs);
 };
 
 #endif /* AP_UAVCAN_H_ */
